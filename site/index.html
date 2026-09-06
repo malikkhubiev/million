@@ -86,7 +86,8 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
   inset:0;
   z-index:-1;
   background:#fff;
-  transform:translateY(102%);
+  transform:scaleY(0);
+  transform-origin:bottom center;
   transition:transform .85s cubic-bezier(.19,1,.22,1);
 }
 .word:hover{
@@ -94,7 +95,7 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
   border-color:#fff;
   transform:translateY(-2px);
 }
-.word:hover i{transform:translateY(0)}
+.word:hover i{transform:scaleY(1)}
 @media (prefers-reduced-motion:reduce){
   .word,.word i{transition:none}
 }
@@ -132,31 +133,27 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
 @media(max-width:860px){
   .manifesto-inner,.cards{grid-template-columns:1fr}
   .mosaic{
-    height:auto;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    gap:56px;
-    padding:28px 0 48px;
-    margin-top:48px;
+    height:460vw;
+    margin-top:56px;
+    margin-bottom:24px;
   }
-  .polaroid{
-    position:relative;
-    left:auto !important;
-    right:auto !important;
-    top:auto !important;
-    bottom:auto !important;
-    width:68% !important;
+  .p1,.p2,.p3,.p4,.p5,.p6{
+    position:absolute;
+    width:58%;
+    left:21%;
+    right:auto;
+    bottom:auto;
   }
-  .p1{transform:rotate(-8deg)}
-  .p2{width:78% !important;transform:rotate(3deg)}
-  .p3{width:52% !important;transform:rotate(6deg)}
-  .p4{transform:rotate(7deg)}
-  .p5{width:74% !important;transform:rotate(-4deg)}
-  .p6{width:60% !important;transform:rotate(9deg)}
+  .p1{top:0;transform:rotate(-8deg)}
+  .p2{top:76vw;transform:rotate(3deg);width:62%;left:19%}
+  .p3{top:152vw;width:46%;left:27%;transform:rotate(6deg)}
+  .p4{top:228vw;transform:rotate(7deg)}
+  .p5{top:304vw;transform:rotate(-4deg)}
+  .p6{top:380vw;width:52%;left:24%;transform:rotate(9deg)}
   .polaroid:hover{transform:scale(1.04) rotate(0deg)!important}
-  #follow{width:132px;height:174px;z-index:95}
+  #follow{width:140px;height:184px;z-index:95;opacity:0}
   body.following{cursor:auto}
+  body.following #follow{opacity:1}
   .lines button{cursor:pointer}
 }
 </style>
@@ -269,15 +266,19 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
 
 <script>
 const BOT = "https://t.me/teacher_life_bot?start=site";
-document.getElementById("payCta").href = BOT;
+const payCta = document.getElementById("payCta");
+payCta.href = BOT;
+payCta.addEventListener("click", () => {
+  if (typeof ym === "function") ym(112323537, "reachGoal", "go_telegram");
+});
 
 const follow = document.getElementById("follow");
 function placeFollow(x, y){
   const mobile = window.matchMedia("(max-width:860px)").matches;
-  const w = mobile ? 132 : 176;
-  const h = mobile ? 174 : 230;
-  const left = Math.min(window.innerWidth - w - 10, Math.max(8, x + 16));
-  const top = Math.min(window.innerHeight - h - 10, Math.max(8, y - h * 0.45));
+  const w = mobile ? 140 : 176;
+  const h = mobile ? 184 : 230;
+  const left = Math.min(window.innerWidth - w - 10, Math.max(8, x + 14));
+  const top = Math.min(window.innerHeight - h - 10, Math.max(8, y - h * 0.55));
   follow.style.transform = `translate3d(${left}px, ${top}px, 0)`;
 }
 document.querySelectorAll(".lines button").forEach(btn => {
@@ -287,11 +288,17 @@ document.querySelectorAll(".lines button").forEach(btn => {
     placeFollow(x, y);
   };
   btn.addEventListener("pointerenter", e => show(e.clientX, e.clientY));
+  btn.addEventListener("pointerdown", e => show(e.clientX, e.clientY));
   btn.addEventListener("pointermove", e => {
     if (!document.body.classList.contains("following")) show(e.clientX, e.clientY);
     else placeFollow(e.clientX, e.clientY);
   });
   btn.addEventListener("pointerleave", () => document.body.classList.remove("following"));
+  btn.addEventListener("pointerup", () => {
+    if (window.matchMedia("(max-width:860px)").matches) {
+      setTimeout(() => document.body.classList.remove("following"), 900);
+    }
+  });
 });
 </script>
 <!-- Yandex.Metrika counter -->
