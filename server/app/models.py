@@ -3,15 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Optional
 
-from sqlalchemy import (
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-    UniqueConstraint,
-    func,
-)
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 
@@ -23,9 +15,9 @@ class Client(Base):
     __tablename__ = "clients"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    name: Mapped[str] = mapped_column(String(200), nullable=False)
-    email: Mapped[str] = mapped_column(String(320), nullable=False, index=True)
-    telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True, index=True)
+    telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, unique=True, index=True)
     telegram_username: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
@@ -34,8 +26,8 @@ class Client(Base):
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
 
-    payments: Mapped[list[Payment]] = relationship(back_populates="client")
-    invites: Mapped[list[InviteLink]] = relationship(back_populates="client")
+    payments: Mapped[list["Payment"]] = relationship(back_populates="client")
+    invites: Mapped[list["InviteLink"]] = relationship(back_populates="client")
 
 
 class Payment(Base):
@@ -51,7 +43,9 @@ class Payment(Base):
     currency: Mapped[str] = mapped_column(String(8), nullable=False, default="RUB")
     status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending", index=True)
     description: Mapped[str] = mapped_column(String(256), nullable=False)
+    source: Mapped[str] = mapped_column(String(32), nullable=False, default="telegram")
     confirmation_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    invite_sent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     paid_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     canceled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     fulfilled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -63,7 +57,7 @@ class Payment(Base):
     )
 
     client: Mapped[Client] = relationship(back_populates="payments")
-    invites: Mapped[list[InviteLink]] = relationship(back_populates="payment")
+    invites: Mapped[list["InviteLink"]] = relationship(back_populates="payment")
 
 
 class InviteLink(Base):
@@ -84,8 +78,6 @@ class InviteLink(Base):
 
 
 class WebhookEvent(Base):
-    """Идемпотентность входящих вебхуков (ЮKassa / Telegram)."""
-
     __tablename__ = "webhook_events"
     __table_args__ = (UniqueConstraint("provider", "event_key", name="uq_webhook_provider_key"),)
 

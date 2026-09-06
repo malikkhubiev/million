@@ -21,15 +21,40 @@ def new_order_id() -> str:
     return "VS-" + uuid.uuid4().hex[:10].upper()
 
 
-async def get_or_create_client(session: AsyncSession, *, name: str, email: str) -> Client:
-    email_norm = email.strip().lower()
-    result = await session.execute(select(Client).where(Client.email == email_norm))
-    client = result.scalar_one_or_none()
+async def get_or_create_client(
+    session: AsyncSession,
+    *,
+    name: str = "",
+    email: str | None = None,
+    telegram_user_id: int | None = None,
+    telegram_username: str | None = None,
+) -> Client:
+    client: Client | None = None
+    if telegram_user_id:
+        result = await session.execute(select(Client).where(Client.telegram_user_id == telegram_user_id))
+        client = result.scalar_one_or_none()
+    if not client and email:
+        result = await session.execute(select(Client).where(Client.email == email.strip().lower()))
+        client = result.scalar_one_or_none()
+
     if client:
-        if name and client.name != name:
-            client.name = name.strip()
+        if name:
+            client.name = name
+        if email:
+            client.email = email.strip().lower()
+        if telegram_user_id:
+            client.telegram_user_id = telegram_user_id
+        if telegram_username:
+            client.telegram_username = telegram_username
+        await session.flush()
         return client
-    client = Client(name=name.strip(), email=email_norm)
+
+    client = Client(
+        name=(name or (telegram_username or "") or "Гость").strip(),
+        email=email.strip().lower() if email else None,
+        telegram_user_id=telegram_user_id,
+        telegram_username=telegram_username,
+    )
     session.add(client)
     await session.flush()
     return client
@@ -39,14 +64,35 @@ async def create_checkout(
     session: AsyncSession,
     settings: Settings,
     *,
-    name: str,
-    email: str,
+    name: str = "",
+    email: str | None = None,
+    telegram_user_id: int | None = None,
+    telegram_username: str | None = None,
+    source: str = "telegram",
 ) -> Payment:
-    client = await get_or_create_client(session, name=name, email=email)
+    client = await get_or_create_client(
+        session,
+        name=name,
+        email=email,
+        telegram_user_id=telegram_user_id,
+        telegram_username=telegram_username,
+    )
+
+    pending = await session.execute(
+        select(Payment)
+        .where(
+            Payment.client_id == client.id,
+            Payment.status.in_(("pending", "waiting_for_capture")),
+        )
+        .order_by(Payment.id.desc())
+    )
+    existing = pending.scalars().first()
+    if existing and existing.confirmation_url:
+        return existing
+
     order_id = new_order_id()
     idempotence_key = str(uuid.uuid4())
     description = f"{settings.product_title} · {order_id}"
-
     payment = Payment(
         client_id=client.id,
         order_id=order_id,
@@ -55,11 +101,21 @@ async def create_checkout(
         currency="RUB",
         status="pending",
         description=description,
+        source=source,
     )
     session.add(payment)
     await session.flush()
 
     return_url = f"{settings.return_url}?order={order_id}"
+    metadata = {
+        "order_id": order_id,
+        "client_id": str(client.id),
+        "source": source,
+    }
+    if telegram_user_id:
+        metadata["telegram_user_id"] = str(telegram_user_id)
+    if client.email:
+        metadata["email"] = client.email
 
     async with YooKassaClient(settings) as yk:
         try:
@@ -67,7 +123,7 @@ async def create_checkout(
                 amount_value=settings.price_value,
                 description=description,
                 return_url=return_url,
-                metadata={"order_id": order_id, "client_id": str(client.id), "email": client.email},
+                metadata=metadata,
                 customer_email=client.email,
                 idempotence_key=idempotence_key,
             )
@@ -85,6 +141,17 @@ async def create_checkout(
     return payment
 
 
+async def latest_succeeded_for_telegram(session: AsyncSession, telegram_user_id: int) -> Payment | None:
+    result = await session.execute(
+        select(Payment)
+        .join(Client)
+        .options(selectinload(Payment.invites), selectinload(Payment.client))
+        .where(Client.telegram_user_id == telegram_user_id, Payment.status == "succeeded")
+        .order_by(Payment.id.desc())
+    )
+    return result.scalars().first()
+
+
 async def mark_webhook_seen(
     session: AsyncSession,
     *,
@@ -93,7 +160,6 @@ async def mark_webhook_seen(
     event_type: str | None,
     payload: dict,
 ) -> bool:
-    """Возвращает True, если событие уже обрабатывали."""
     existing = await session.execute(
         select(WebhookEvent).where(
             WebhookEvent.provider == provider,
@@ -116,10 +182,6 @@ async def mark_webhook_seen(
 
 
 async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Payment) -> InviteLink | None:
-    """После succeeded — создать одноразовую пригласительную (идемпотентно)."""
-    if payment.fulfilled_at and payment.invites:
-        return payment.invites[0]
-
     result = await session.execute(
         select(InviteLink).where(InviteLink.payment_id == payment.id).order_by(InviteLink.id.desc())
     )
@@ -127,10 +189,11 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
     if existing:
         payment.fulfilled_at = payment.fulfilled_at or datetime.now(timezone.utc)
         await session.commit()
+        await deliver_invite(session, settings, payment, existing)
         return existing
 
     if not settings.is_telegram_configured:
-        logger.warning("Telegram не настроен — пригласительная не создана для %s", payment.order_id)
+        logger.warning("Telegram не настроен — invite не создан для %s", payment.order_id)
         return None
 
     async with TelegramClient(settings) as tg:
@@ -158,7 +221,34 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
     payment.fulfilled_at = datetime.now(timezone.utc)
     await session.commit()
     await session.refresh(invite)
+    await deliver_invite(session, settings, payment, invite)
     return invite
+
+
+async def deliver_invite(
+    session: AsyncSession,
+    settings: Settings,
+    payment: Payment,
+    invite: InviteLink,
+) -> None:
+    if payment.invite_sent_at:
+        return
+    client = payment.client
+    if not client or not client.telegram_user_id:
+        logger.info("Нет telegram_user_id для автодоставки %s", payment.order_id)
+        return
+    text = (
+        "Оплата прошла. Ты внутри.\n\n"
+        f'<a href="{invite.invite_url}">Открыть закрытый канал</a>\n\n'
+        "Ссылка на одного человека. Сохрани её."
+    )
+    try:
+        async with TelegramClient(settings) as tg:
+            await tg.send_message(client.telegram_user_id, text)
+        payment.invite_sent_at = datetime.now(timezone.utc)
+        await session.commit()
+    except TelegramError:
+        logger.exception("Не удалось отправить invite в Telegram для %s", payment.order_id)
 
 
 async def apply_yookassa_payment_object(
@@ -169,6 +259,7 @@ async def apply_yookassa_payment_object(
     payment_id = obj.get("id")
     metadata = obj.get("metadata") or {}
     order_id = metadata.get("order_id")
+    tg_id = metadata.get("telegram_user_id")
 
     q = select(Payment).options(selectinload(Payment.invites), selectinload(Payment.client))
     if payment_id:
@@ -191,6 +282,12 @@ async def apply_yookassa_payment_object(
         logger.warning("Платёж не найден для объекта ЮKassa: %s", payment_id)
         return None
 
+    if tg_id and payment.client and not payment.client.telegram_user_id:
+        try:
+            payment.client.telegram_user_id = int(tg_id)
+        except ValueError:
+            pass
+
     payment.raw_last_event = json.dumps(obj, ensure_ascii=False)
     status = obj.get("status") or payment.status
     payment.status = status
@@ -211,11 +308,7 @@ async def apply_yookassa_payment_object(
     return payment
 
 
-async def handle_yookassa_notification(
-    session: AsyncSession,
-    settings: Settings,
-    payload: dict,
-) -> None:
+async def handle_yookassa_notification(session: AsyncSession, settings: Settings, payload: dict) -> None:
     event = payload.get("event") or "unknown"
     obj = payload.get("object") or {}
     payment_id = obj.get("id") or "none"
@@ -248,11 +341,7 @@ async def handle_yookassa_notification(
         await session.commit()
 
 
-async def sync_payment_from_yookassa(
-    session: AsyncSession,
-    settings: Settings,
-    payment: Payment,
-) -> Payment:
+async def sync_payment_from_yookassa(session: AsyncSession, settings: Settings, payment: Payment) -> Payment:
     if not payment.yookassa_payment_id or not settings.is_yookassa_configured:
         return payment
     async with YooKassaClient(settings) as yk:
@@ -266,35 +355,10 @@ async def sync_payment_from_yookassa(
     return result.scalar_one()
 
 
-async def get_payment_by_order(
-    session: AsyncSession,
-    order_id: str,
-) -> Payment | None:
+async def get_payment_by_order(session: AsyncSession, order_id: str) -> Payment | None:
     result = await session.execute(
         select(Payment)
         .options(selectinload(Payment.invites), selectinload(Payment.client))
-        .where(Payment.order_id == order_id)
+        .where(Payment.order_id == order_id.upper())
     )
     return result.scalar_one_or_none()
-
-
-async def find_paid_invite_for_email(session: AsyncSession, email: str) -> InviteLink | None:
-    email_norm = email.strip().lower()
-    result = await session.execute(
-        select(InviteLink)
-        .join(Payment)
-        .join(Client)
-        .where(Client.email == email_norm, Payment.status == "succeeded")
-        .order_by(InviteLink.id.desc())
-    )
-    return result.scalars().first()
-
-
-async def find_paid_invite_for_order(session: AsyncSession, order_id: str) -> InviteLink | None:
-    result = await session.execute(
-        select(InviteLink)
-        .join(Payment)
-        .where(Payment.order_id == order_id.upper(), Payment.status == "succeeded")
-        .order_by(InviteLink.id.desc())
-    )
-    return result.scalars().first()

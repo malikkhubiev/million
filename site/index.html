@@ -10,13 +10,11 @@
 <style>
 :root{
   --cream:#f4eee6;
-  --paper:#ebe3d6;
   --ink:#161411;
   --muted:#6a635a;
   --gold:#b07a3a;
   --terracotta:#c45c2a;
   --dark:#12110f;
-  --soft:#fbf7f1;
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
@@ -34,9 +32,10 @@ h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clam
 h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);margin:22px auto 0}
 .sub{font-size:clamp(16px,2vw,20px);line-height:1.55;color:#3f3a34;max-width:460px;margin:22px auto 28px}
 .cta-row{display:flex;flex-direction:column;align-items:center;gap:14px}
-.buy{display:inline-flex;align-items:center;justify-content:center;gap:14px;background:var(--ink);color:#f7f1e8;border:0;padding:18px 34px;font:600 12px/1 Outfit,sans-serif;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;min-width:260px}
-.buy:hover{background:#2a2420}
-.buy:disabled{opacity:.55;cursor:wait}
+.buy{display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:#f7f1e8;border:0;padding:18px 34px;font:600 12px/1 Outfit,sans-serif;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;min-width:280px;transition:background .25s,transform .25s}
+.buy:hover{background:#2a2420;transform:translateY(-2px)}
+.buy.pulse{animation:pulse 2.8s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,20,17,.18)}70%{box-shadow:0 0 0 16px rgba(22,20,17,0)}}
 .price{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:500}
 
 .arrow{display:flex;justify-content:center;padding:28px 0 8px}
@@ -67,50 +66,37 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
 .p4{width:26%;aspect-ratio:3/4;left:8%;bottom:2%;transform:rotate(7deg)}
 .p5{width:30%;aspect-ratio:4/3;left:36%;bottom:6%;transform:rotate(-4deg)}
 .p6{width:22%;aspect-ratio:3/4;right:10%;bottom:10%;transform:rotate(9deg)}
-.words{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;margin-top:40px}
+
+.words{display:flex;justify-content:center;flex-wrap:wrap;gap:12px;margin-top:40px}
 .word{
   position:relative;
-  isolation:isolate;
   overflow:hidden;
-  border:1px solid rgba(90,83,74,.9);
+  border:1px solid rgba(247,241,232,.28);
   border-radius:99px;
-  padding:11px 22px;
-  color:#d8d2c9;
+  padding:12px 24px;
+  color:#f4efe7;
   font-size:13px;
-  letter-spacing:.06em;
+  letter-spacing:.08em;
   cursor:default;
-  transition:color .55s cubic-bezier(.22,1,.36,1), border-color .55s ease, transform .4s ease, letter-spacing .4s ease;
+  background:transparent;
+  transition:color .55s cubic-bezier(.22,1,.36,1), border-color .55s ease, transform .45s ease;
 }
-.word::before{
-  content:"";
+.word i{
   position:absolute;
   inset:0;
   z-index:-1;
-  background:
-    linear-gradient(180deg, rgba(255,236,210,.95) 0%, #e0b77a 42%, #b07a3a 100%);
-  transform:scaleY(0);
-  transform-origin:bottom center;
-  transition:transform .75s cubic-bezier(.22,1,.36,1);
-}
-.word::after{
-  content:"";
-  position:absolute;
-  inset:-1px;
-  z-index:-2;
-  opacity:0;
-  background:radial-gradient(circle at 50% 120%, rgba(224,183,122,.55), transparent 62%);
-  transition:opacity .6s ease;
+  background:#fff;
+  transform:translateX(-102%);
+  transition:transform .85s cubic-bezier(.19,1,.22,1);
 }
 .word:hover{
-  color:#1a1510;
-  border-color:#e0b77a;
-  transform:translateY(-3px);
-  letter-spacing:.1em;
+  color:#12110f;
+  border-color:#fff;
+  transform:translateY(-2px);
 }
-.word:hover::before{transform:scaleY(1)}
-.word:hover::after{opacity:1}
+.word:hover i{transform:translateX(0)}
 @media (prefers-reduced-motion:reduce){
-  .word,.word::before,.word::after{transition:none}
+  .word,.word i{transition:none}
 }
 
 .manifesto{padding:110px 22px 50px;background:linear-gradient(180deg,#e7dccb,#efe6d8)}
@@ -129,43 +115,45 @@ body.following #follow{opacity:1}
 .card{background:#fff9f1;padding:28px 22px;text-align:center;border:1px solid rgba(176,122,58,.18)}
 .card b{display:block;font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:500;margin-bottom:8px}
 
-.purchase{padding:90px 22px 120px;text-align:center;background:radial-gradient(circle at 50% 0,#fffdf8,var(--cream) 55%)}
-.purchase h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(52px,8vw,108px);line-height:.88;letter-spacing:-.05em;margin:8px 0 18px}
-.price-big{font-family:"Cormorant Garamond",serif;font-size:clamp(48px,6vw,72px);margin:18px 0 8px}
-.included{max-width:520px;margin:22px auto;color:var(--muted);line-height:1.7}
-.guarantees{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:980px;margin:48px auto 40px;text-align:left}
-.g{background:#fff;padding:22px 18px;border:1px solid rgba(22,20,17,.08);min-height:140px}
-.g strong{display:block;font-size:13px;letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
-.g p{font-size:14px;color:var(--muted);line-height:1.5}
-.pay-logos{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:22px 0 8px}
-.pay-logos span{border:1px solid rgba(22,20,17,.12);padding:8px 12px;font-size:11px;letter-spacing:.12em;text-transform:uppercase;background:#fff}
-.fine{font-size:12px;color:#8a837a;max-width:520px;margin:16px auto 0;line-height:1.5}
+.purchase{padding:110px 22px 130px;text-align:center;background:radial-gradient(circle at 50% 0,#fffdf8,var(--cream) 55%);position:relative}
+.purchase .kicker{margin-bottom:22px}
+.purchase h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(48px,8vw,104px);line-height:.88;letter-spacing:-.05em;margin:0 0 22px}
+.lead{max-width:540px;margin:0 auto 28px;font-size:clamp(17px,2.2vw,21px);line-height:1.65;color:#3f3a34}
+.truths{max-width:480px;margin:0 auto 36px;text-align:left}
+.truths p{font-size:16px;line-height:1.7;color:#4a453e;padding:12px 0;border-bottom:1px solid rgba(22,20,17,.08)}
+.truths p:last-child{border-bottom:0}
+.price-big{font-family:"Cormorant Garamond",serif;font-size:clamp(52px,7vw,84px);margin:8px 0 6px}
+.price-note{font-size:14px;color:var(--muted);margin-bottom:28px}
+.cta-soft{margin-top:18px;font-size:13px;color:#8a837a;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.55}
+.fine{font-size:12px;color:#8a837a;max-width:420px;margin:22px auto 0;line-height:1.5}
 
 footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:28px 8%;font-size:13px;color:#7a746c;border-top:1px solid rgba(0,0,0,.06)}
 
-.modal{position:fixed;inset:0;background:rgba(18,17,15,.72);z-index:100;display:none;align-items:center;justify-content:center;padding:18px}
-.modal.open{display:flex}
-.sheet{width:min(480px,100%);background:var(--soft);padding:34px 28px;position:relative;max-height:92vh;overflow:auto}
-.sheet h3{font-family:"Cormorant Garamond",serif;font-size:40px;font-weight:500;margin-bottom:6px}
-.close{position:absolute;top:14px;right:16px;border:0;background:none;font-size:28px;cursor:pointer}
-label{display:block;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7a746c;margin:14px 0 6px}
-input{width:100%;padding:14px 12px;border:1px solid rgba(22,20,17,.16);background:#fff;font:16px Outfit,sans-serif}
-.check{display:flex;gap:10px;align-items:flex-start;margin:16px 0;font-size:13px;color:#5c564e;text-transform:none;letter-spacing:0}
-.check input{width:auto;margin-top:3px}
-.pay-now{width:100%;margin-top:8px}
-.status{display:none;text-align:center;padding:40px 10px}
-.status.show{display:block}
-.spin{width:46px;height:46px;border:2px solid #ddd;border-top-color:var(--ink);border-radius:50%;margin:0 auto 16px;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.err{color:#8a3a2a;font-size:14px;margin-top:12px;display:none}
-.err.show{display:block}
-
 @media(max-width:860px){
-  .manifesto-inner,.guarantees,.cards{grid-template-columns:1fr}
-  .mosaic{height:980px}
-  .p1,.p2,.p3,.p4,.p5,.p6{width:58%;left:21%;right:auto;position:absolute}
-  .p1{top:0}.p2{top:16%}.p3{top:32%;width:46%;left:27%}.p4{top:50%}.p5{top:66%}.p6{top:82%;width:48%;left:26%}
-  .polaroid{padding:8px 8px 28px}
+  .manifesto-inner,.cards{grid-template-columns:1fr}
+  .mosaic{
+    height:auto;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:12px;
+    margin-top:48px;
+  }
+  .polaroid{
+    position:relative;
+    width:100% !important;
+    left:auto !important;
+    right:auto !important;
+    top:auto !important;
+    bottom:auto !important;
+    transform:none !important;
+    aspect-ratio:3/4;
+  }
+  .polaroid:hover{transform:scale(1.02) !important}
+  .p2,.p5{aspect-ratio:3/4}
+  .p3{grid-column:1 / -1;width:52% !important;aspect-ratio:1;margin:0 auto;justify-self:center}
+  body.following{cursor:auto}
+  body.following #follow{display:none}
+  .lines button{cursor:pointer}
 }
 </style>
 </head>
@@ -203,8 +191,12 @@ input{width:100%;padding:14px 12px;border:1px solid rgba(22,20,17,.16);backgroun
     <div class="kicker">Ты хочешь</div>
     <div class="emotion">Не успевать больше.<br>А чувствовать больше.</div>
     <div class="words">
-      <span class="word">энергию</span><span class="word">спокойствие</span><span class="word">уверенность</span>
-      <span class="word">концентрацию</span><span class="word">свободу</span><span class="word">удовольствие</span>
+      <span class="word"><i></i>энергию</span>
+      <span class="word"><i></i>спокойствие</span>
+      <span class="word"><i></i>уверенность</span>
+      <span class="word"><i></i>концентрацию</span>
+      <span class="word"><i></i>свободу</span>
+      <span class="word"><i></i>удовольствие</span>
     </div>
   </div>
   <div class="mosaic" aria-label="Галерея состояния">
@@ -248,58 +240,37 @@ input{width:100%;padding:14px 12px;border:1px solid rgba(22,20,17,.16);backgroun
   </div>
 </section>
 
-<div class="arrow"><a href="#purchase" aria-label="К оплате"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+<div class="arrow"><a href="#purchase" aria-label="К доступу"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
 
 <section class="purchase" id="purchase">
-  <div class="kicker">Доступ к программе</div>
-  <h2>Начать<br>сейчас.</h2>
-  <p class="included">Полный курс: аудио + PDF-чек-листы + задания. После оплаты — пригласительная ссылка в закрытый Telegram-канал.</p>
+  <div class="kicker">Этот момент</div>
+  <h2>Ты уже знаешь,<br>зачем ты здесь.</h2>
+  <p class="lead">Не чтобы стать другой. Чтобы снова почувствовать ту себя, которая живёт — а не справляется.</p>
+  <div class="truths">
+    <p>Каждое утро на автопилоте стоит дороже, чем эта программа.</p>
+    <p>Энергия, спокойствие и ясность не приходят «когда-нибудь». Их выбирают.</p>
+    <p>Доступ откроется сразу. Одна кнопка — и ты внутри.</p>
+  </div>
   <div class="price-big">50 000 ₽</div>
-  <button class="buy" id="openPay" type="button">Оплатить и получить доступ</button>
-  <div class="pay-logos">
-    <span>ЮKassa</span><span>Мир</span><span>Visa</span><span>Mastercard</span><span>СБП</span>
-  </div>
-  <div class="guarantees">
-    <div class="g"><strong>Гарантия оплаты</strong><p>Платёж на стороне ЮKassa по защищённому соединению. Данные карты на сайт не вводятся.</p></div>
-    <div class="g"><strong>Доступ сразу</strong><p>После статуса «оплачено» выдаётся пригласительная ссылка в закрытый канал. Если не пришла — полный возврат.</p></div>
-    <div class="g"><strong>14 дней</strong><p>Если курс не зашёл, напишите в течение 14 дней — вернём деньги без споров.</p></div>
-    <div class="g"><strong>Фиксация сделки</strong><p>Каждому платежу — номер заказа. Оплата завершена только после статуса «оплачено» в ЮKassa.</p></div>
-  </div>
-  <p class="fine">Нажимая «Оплатить», вы заключаете <a href="/offer.html">договор-оферту</a> на доступ к программе «Верни себе себя» на сумму 50 000 ₽.</p>
+  <p class="price-note">Инвестиция в состояние, из которого строится вся жизнь</p>
+  <a class="buy pulse" id="payCta" href="https://t.me/teacher_life_bot?start=site">Вернуть себе себя</a>
+  <p class="cta-soft">Оплата в Telegram за несколько секунд. Ссылка в закрытый канал придёт автоматически.</p>
+  <p class="fine">Нажимая кнопку, вы принимаете <a href="offer.html">оферту</a> на доступ к программе «Верни себе себя».</p>
 </section>
 
 <footer>
   <span>Система состояния</span>
-  <span>Оплата через ЮKassa · © 2026</span>
+  <span>© 2026</span>
 </footer>
 
-<div class="modal" id="modal" role="dialog" aria-modal="true">
-  <div class="sheet">
-    <button class="close" type="button" id="closePay" aria-label="Закрыть">×</button>
-    <div id="formBox">
-      <div class="kicker">Защищённая оплата · ЮKassa</div>
-      <h3>Оформить доступ</h3>
-      <p class="fine" style="margin:0 0 8px">50 000 ₽ · карта и СБП на стороне ЮKassa · без ввода карты на сайте</p>
-      <label for="name">Имя</label>
-      <input id="name" autocomplete="name" placeholder="Как к вам обращаться">
-      <label for="email">Email</label>
-      <input id="email" type="email" autocomplete="email" placeholder="you@email.com">
-      <label class="check"><input type="checkbox" id="agree"> Соглашаюсь с <a href="/offer.html" target="_blank" rel="noopener">офертой</a>. Подтверждаю оплату 50 000 ₽.</label>
-      <button class="buy pay-now" type="button" id="payBtn">Перейти к оплате</button>
-      <p class="err" id="payErr"></p>
-      <p class="fine">После оплаты вы вернётесь на страницу с пригласительной ссылкой в Telegram-канал. Сохраните номер заказа.</p>
-    </div>
-    <div class="status" id="waitBox">
-      <div class="spin"></div>
-      <p>Создаём платёж в ЮKassa…</p>
-    </div>
-  </div>
-</div>
-
 <script>
+const BOT = "https://t.me/teacher_life_bot?start=site";
+document.getElementById("payCta").href = BOT;
+
 const follow = document.getElementById("follow");
 document.querySelectorAll(".lines button").forEach(btn => {
   btn.addEventListener("mouseenter", () => {
+    if (window.matchMedia("(max-width:860px)").matches) return;
     follow.src = btn.dataset.img;
     document.body.classList.add("following");
   });
@@ -308,61 +279,19 @@ document.querySelectorAll(".lines button").forEach(btn => {
     follow.style.transform = `translate3d(${e.clientX + 18}px, ${e.clientY - 110}px, 0)`;
   });
 });
-
-const modal = document.getElementById("modal");
-const formBox = document.getElementById("formBox");
-const waitBox = document.getElementById("waitBox");
-const payErr = document.getElementById("payErr");
-const payBtn = document.getElementById("payBtn");
-
-document.getElementById("openPay").onclick = () => {
-  payErr.classList.remove("show");
-  formBox.style.display = "block";
-  waitBox.classList.remove("show");
-  modal.classList.add("open");
-};
-document.getElementById("closePay").onclick = () => modal.classList.remove("open");
-modal.addEventListener("click", e => { if (e.target === modal) modal.classList.remove("open"); });
-
-payBtn.onclick = async () => {
-  const email = document.getElementById("email").value.trim();
-  const name = document.getElementById("name").value.trim();
-  payErr.classList.remove("show");
-  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    payErr.textContent = "Укажите имя и корректный email.";
-    payErr.classList.add("show");
-    return;
-  }
-  if (!document.getElementById("agree").checked) {
-    payErr.textContent = "Чтобы оплатить, подтвердите оферту.";
-    payErr.classList.add("show");
-    return;
-  }
-
-  formBox.style.display = "none";
-  waitBox.classList.add("show");
-  payBtn.disabled = true;
-
-  try {
-    const res = await fetch("/api/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, agree: true })
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(typeof data.detail === "string" ? data.detail : (data.detail?.[0]?.msg || "Не удалось создать платёж"));
-    }
-    localStorage.setItem("lastOrder", JSON.stringify({ order_id: data.order_id, email, name, at: new Date().toISOString() }));
-    location.href = data.confirmation_url;
-  } catch (err) {
-    formBox.style.display = "block";
-    waitBox.classList.remove("show");
-    payBtn.disabled = false;
-    payErr.textContent = err.message || "Ошибка оплаты";
-    payErr.classList.add("show");
-  }
-};
 </script>
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=112323537', 'ym');
+
+    ym(112323537, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/112323537" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
 </body>
 </html>

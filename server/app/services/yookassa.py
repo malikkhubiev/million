@@ -18,8 +18,6 @@ class YooKassaError(RuntimeError):
 
 
 class YooKassaClient:
-    """Асинхронный клиент ЮKassa (httpx). Идемпотентность через Idempotence-Key."""
-
     def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
         self.settings = settings
         self._client = client
@@ -50,7 +48,7 @@ class YooKassaClient:
         description: str,
         return_url: str,
         metadata: dict[str, str],
-        customer_email: str,
+        customer_email: str | None = None,
         idempotence_key: str | None = None,
     ) -> dict[str, Any]:
         key = idempotence_key or str(uuid.uuid4())
@@ -61,8 +59,7 @@ class YooKassaClient:
             "description": description[:128],
             "metadata": metadata,
         }
-        # Чек 54-ФЗ — если в кабинете включена фискализация
-        if self.settings.yookassa_vat_code is not None:
+        if customer_email and self.settings.yookassa_vat_code is not None:
             item: dict[str, Any] = {
                 "description": description[:128],
                 "quantity": "1.00",
@@ -71,10 +68,7 @@ class YooKassaClient:
                 "payment_mode": "full_payment",
                 "payment_subject": "service",
             }
-            receipt: dict[str, Any] = {
-                "customer": {"email": customer_email},
-                "items": [item],
-            }
+            receipt: dict[str, Any] = {"customer": {"email": customer_email}, "items": [item]}
             if self.settings.yookassa_tax_system_code is not None:
                 receipt["tax_system_code"] = self.settings.yookassa_tax_system_code
             body["receipt"] = receipt
@@ -120,7 +114,6 @@ class YooKassaClient:
         return data
 
 
-# IP-сети ЮKassa для входящих уведомлений (документация)
 YOOKASSA_WEBHOOK_NETWORKS = (
     "185.71.76.0/27",
     "185.71.77.0/27",

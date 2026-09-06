@@ -5,6 +5,7 @@ from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = ROOT_DIR.parent
 
 
 class Settings(BaseSettings):
@@ -18,6 +19,7 @@ class Settings(BaseSettings):
     app_env: str = "development"
     app_base_url: str = "http://127.0.0.1:8000"
     secret_key: str = "dev-secret-change-me"
+    cors_origins: str = "*"
 
     product_price_kopecks: int = 5_000_000
     product_title: str = "Программа «Верни себе себя»"
@@ -27,8 +29,8 @@ class Settings(BaseSettings):
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
     yookassa_capture: bool = True
-    yookassa_vat_code: int | None = 1
-    yookassa_tax_system_code: int | None = 1
+    yookassa_vat_code: int | None = None
+    yookassa_tax_system_code: int | None = None
     yookassa_webhook_path: str = "/api/yookassa/webhook"
 
     @field_validator("yookassa_vat_code", "yookassa_tax_system_code", mode="before")
@@ -39,12 +41,24 @@ class Settings(BaseSettings):
         return v
 
     telegram_bot_token: str = ""
+    telegram_bot_username: str = "teacher_life_bot"
     telegram_channel_id: str = ""
     telegram_invite_expire_days: int = 30
     telegram_invite_member_limit: int = 1
-    telegram_mode: str = "polling"  # polling | webhook
+    telegram_mode: str = "polling"
     telegram_webhook_secret: str = "change-me"
     telegram_webhook_path: str = "/api/telegram/webhook"
+
+    site_dir: str = ""
+
+    @property
+    def site_path(self) -> Path:
+        if self.site_dir:
+            return Path(self.site_dir)
+        sibling = REPO_ROOT / "site"
+        if sibling.exists():
+            return sibling
+        return ROOT_DIR / "static"
 
     @property
     def price_rubles(self) -> float:
@@ -65,6 +79,16 @@ class Settings(BaseSettings):
     @property
     def return_url(self) -> str:
         return f"{self.app_base_url.rstrip('/')}/success.html"
+
+    @property
+    def bot_link(self) -> str:
+        return f"https://t.me/{self.telegram_bot_username}"
+
+    @property
+    def cors_list(self) -> list[str]:
+        if self.cors_origins.strip() == "*":
+            return ["*"]
+        return [x.strip() for x in self.cors_origins.split(",") if x.strip()]
 
 
 @lru_cache

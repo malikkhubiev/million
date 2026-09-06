@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -8,7 +7,6 @@ import httpx
 
 from app.config import Settings
 
-logger = logging.getLogger(__name__)
 TELEGRAM_API = "https://api.telegram.org"
 
 
@@ -80,26 +78,44 @@ class TelegramClient:
         result["_expire_at"] = expire_at.isoformat() if expire_at else None
         return result
 
-    async def send_message(self, chat_id: int | str, text: str, parse_mode: str | None = "HTML") -> dict[str, Any]:
+    async def send_message(
+        self,
+        chat_id: int | str,
+        text: str,
+        *,
+        parse_mode: str | None = "HTML",
+        reply_markup: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         payload: dict[str, Any] = {"chat_id": chat_id, "text": text, "disable_web_page_preview": True}
         if parse_mode:
             payload["parse_mode"] = parse_mode
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
         return await self.call("sendMessage", **payload)
+
+    async def answer_callback(self, callback_id: str, text: str | None = None) -> dict[str, Any]:
+        body: dict[str, Any] = {"callback_query_id": callback_id}
+        if text:
+            body["text"] = text
+        return await self.call("answerCallbackQuery", **body)
 
     async def set_webhook(self, url: str, secret_token: str) -> dict[str, Any]:
         return await self.call(
             "setWebhook",
             url=url,
             secret_token=secret_token,
-            drop_pending_updates=True,
-            allowed_updates=["message", "my_chat_member"],
+            drop_pending_updates=False,
+            allowed_updates=["message", "callback_query", "my_chat_member"],
         )
 
     async def delete_webhook(self) -> dict[str, Any]:
         return await self.call("deleteWebhook", drop_pending_updates=False)
 
     async def get_updates(self, offset: int | None = None, timeout: int = 25) -> list[dict[str, Any]]:
-        payload: dict[str, Any] = {"timeout": timeout, "allowed_updates": ["message", "my_chat_member"]}
+        payload: dict[str, Any] = {
+            "timeout": timeout,
+            "allowed_updates": ["message", "callback_query", "my_chat_member"],
+        }
         if offset is not None:
             payload["offset"] = offset
         response = await self.client.get(self._url("getUpdates"), params=payload, timeout=timeout + 10)

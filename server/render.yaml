@@ -1,8 +1,7 @@
 services:
   - type: web
-    name: life-energy-api
+    name: million-landing
     runtime: python
-    rootDir: server
     plan: free
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
@@ -13,8 +12,6 @@ services:
         value: webhook
       - key: DATABASE_URL
         value: sqlite+aiosqlite:///./data/app.db
-      - key: CORS_ORIGINS
-        value: "*"
       - key: APP_BASE_URL
         sync: false
       - key: YOOKASSA_SHOP_ID
@@ -25,8 +22,6 @@ services:
         sync: false
       - key: TELEGRAM_CHANNEL_ID
         sync: false
-      - key: TELEGRAM_BOT_USERNAME
-        value: teacher_life_bot
       - key: TELEGRAM_WEBHOOK_SECRET
         generateValue: true
       - key: SECRET_KEY

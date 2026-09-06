@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Доступ · Верни себе себя</title>
+<meta http-equiv="refresh" content="0;url=https://t.me/teacher_life_bot?start=paid">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Outfit:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body{font-family:Outfit,sans-serif;background:#f4eee6;color:#161411;min-height:100vh;display:grid;place-items:center;text-align:center;padding:32px}
+h1{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:42px;margin-bottom:14px}
+p{color:#6a635a;line-height:1.6}
+a{display:inline-block;margin-top:22px;background:#161411;color:#f7f1e8;text-decoration:none;padding:16px 28px;letter-spacing:.12em;text-transform:uppercase;font-size:12px;font-weight:600}
+</style>
+</head>
+<body>
+<div>
+  <h1>Возвращайтесь в Telegram</h1>
+  <p>Доступ придёт туда автоматически. Если страница не открылась сама — нажмите кнопку.</p>
+  <a id="go" href="https://t.me/teacher_life_bot?start=paid">Открыть бота</a>
+</div>
+<script>
+const order = new URLSearchParams(location.search).get("order") || "";
+const start = order ? ("paid_" + order) : "paid";
+const url = "https://t.me/teacher_life_bot?start=" + encodeURIComponent(start);
+document.getElementById("go").href = url;
+location.replace(url);
+</script>
+</body>
+</html>
