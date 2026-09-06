@@ -27,6 +27,9 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
    - `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY`
    - `TELEGRAM_BOT_TOKEN` / `TELEGRAM_CHANNEL_ID`
    - `TELEGRAM_WEBHOOK_SECRET`
+   - `METRIKA_MP_TOKEN` (Measurement Protocol в настройках счётчика)
+
+Цели Метрики (JS-событие): `view_offer`, `click_to_telegram`, `bot_started`, `payment_started`, `payment_success`. Ценность 100 / 500 / 2000 / 15000 / 50000 ₽. Ecommerce purchase на успехе.
 
 Webhook ЮKassa: `https://<сервис>.onrender.com/api/yookassa/webhook`
 

@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import Settings
 from app.models import Client, InviteLink, Payment, WebhookEvent
+from app.services.metrika import metrika_cid_for, track_goal, track_purchase
 from app.services.telegram import TelegramClient, TelegramError
 from app.services.yookassa import YooKassaClient, YooKassaError
 
@@ -28,6 +29,8 @@ async def get_or_create_client(
     email: str | None = None,
     telegram_user_id: int | None = None,
     telegram_username: str | None = None,
+    language_code: str | None = None,
+    is_premium: bool | None = None,
 ) -> Client:
     client: Client | None = None
     if telegram_user_id:
@@ -46,6 +49,10 @@ async def get_or_create_client(
             client.telegram_user_id = telegram_user_id
         if telegram_username:
             client.telegram_username = telegram_username
+        if language_code:
+            client.language_code = language_code
+        if is_premium is not None:
+            client.is_premium = 1 if is_premium else 0
         await session.flush()
         return client
 
@@ -54,6 +61,8 @@ async def get_or_create_client(
         email=email.strip().lower() if email else None,
         telegram_user_id=telegram_user_id,
         telegram_username=telegram_username,
+        language_code=language_code,
+        is_premium=None if is_premium is None else (1 if is_premium else 0),
     )
     session.add(client)
     await session.flush()
@@ -222,7 +231,23 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
     await session.commit()
     await session.refresh(invite)
     await deliver_invite(session, settings, payment, invite)
+    await _track_payment_success(settings, payment)
     return invite
+
+
+async def _track_payment_success(settings: Settings, payment: Payment) -> None:
+    client = payment.client
+    cid = metrika_cid_for(client.metrika_client_id if client else None, client.telegram_user_id if client else None)
+    if not cid:
+        return
+    await track_goal(
+        settings,
+        cid=cid,
+        goal="payment_success",
+        params={"funnel": "payment_success", "order_id": payment.order_id},
+        path="/bot/paid",
+    )
+    await track_purchase(settings, cid=cid, order_id=payment.order_id, amount=settings.price_rubles)
 
 
 async def deliver_invite(
@@ -301,6 +326,17 @@ async def apply_yookassa_payment_object(
     elif status == "canceled":
         payment.canceled_at = payment.canceled_at or datetime.now(timezone.utc)
         await session.commit()
+        client = payment.client
+        cid = metrika_cid_for(client.metrika_client_id if client else None, client.telegram_user_id if client else None)
+        if cid:
+            await track_goal(
+                settings,
+                cid=cid,
+                goal="payment_canceled",
+                value=0,
+                params={"funnel": "payment_canceled", "order_id": payment.order_id},
+                path="/bot/canceled",
+            )
     else:
         await session.commit()
 

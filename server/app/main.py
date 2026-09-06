@@ -11,6 +11,8 @@ from fastapi.responses import FileResponse, ORJSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from pydantic import BaseModel
+
 from app.config import Settings, get_settings
 from app.db import SessionLocal, get_session, init_db
 from app.services.bot import PollingRunner, handle_bot_update
@@ -20,6 +22,7 @@ from app.services.payments import (
     sync_payment_from_yookassa,
 )
 from app.services.telegram import TelegramClient
+from app.services.tracking import create_intent
 from app.services.yookassa import YOOKASSA_WEBHOOK_NETWORKS
 
 logger = logging.getLogger(__name__)
@@ -93,7 +96,56 @@ async def health(settings: Settings = Depends(get_settings)):
         "yookassa": settings.is_yookassa_configured,
         "telegram": settings.is_telegram_configured,
         "telegram_mode": settings.telegram_mode,
+        "metrika": settings.is_metrika_configured,
         "bot": settings.bot_link,
+    }
+
+
+class IntentIn(BaseModel):
+    metrika_client_id: str | None = None
+    yclid: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_content: str | None = None
+    utm_term: str | None = None
+    landing_url: str | None = None
+    referrer: str | None = None
+
+
+@app.post("/api/intent")
+async def create_tracking_intent(
+    body: IntentIn,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+):
+    utm = {
+        k: v
+        for k, v in {
+            "utm_source": body.utm_source,
+            "utm_medium": body.utm_medium,
+            "utm_campaign": body.utm_campaign,
+            "utm_content": body.utm_content,
+            "utm_term": body.utm_term,
+        }.items()
+        if v
+    }
+    cid = "".join(ch for ch in (body.metrika_client_id or "") if ch.isdigit()) or None
+    row = await create_intent(
+        session,
+        metrika_client_id=cid,
+        yclid=(body.yclid or "")[:64] or None,
+        utm=utm,
+        landing_url=body.landing_url,
+        referrer=body.referrer,
+        user_agent=request.headers.get("user-agent"),
+    )
+    start = f"t{row.token}"
+    return {
+        "token": row.token,
+        "start": start,
+        "bot_url": f"{settings.bot_link}?start={start}",
     }
 
 

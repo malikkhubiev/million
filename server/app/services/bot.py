@@ -1,18 +1,22 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 from typing import Any
 
 from app.config import Settings, get_settings
 from app.db import SessionLocal
+from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal, track_pageview
 from app.services.payments import (
     create_checkout,
+    get_or_create_client,
     get_payment_by_order,
     latest_succeeded_for_telegram,
     sync_payment_from_yookassa,
 )
 from app.services.telegram import TelegramClient
+from app.services.tracking import apply_tracking_to_client, consume_intent
 from app.services.yookassa import YooKassaError
 
 logger = logging.getLogger(__name__)
@@ -60,6 +64,8 @@ async def _handle_start(settings: Settings, from_user: dict, chat_id: int, paylo
     tg_id = from_user.get("id")
     username = from_user.get("username")
     name = " ".join(x for x in [from_user.get("first_name"), from_user.get("last_name")] if x)
+    lang = from_user.get("language_code")
+    premium = bool(from_user.get("is_premium"))
 
     async with SessionLocal() as session:
         if payload.startswith("paid_"):
@@ -90,16 +96,52 @@ async def _handle_start(settings: Settings, from_user: dict, chat_id: int, paylo
                 )
                 return
 
-    await _send(settings, chat_id, WELCOME, PAY_KB)
-    # регистрируем клиента заранее
-    if tg_id:
-        async with SessionLocal() as session:
-            from app.services.payments import get_or_create_client
-
-            await get_or_create_client(
-                session, name=name, telegram_user_id=tg_id, telegram_username=username
+        client = None
+        if tg_id:
+            client = await get_or_create_client(
+                session,
+                name=name,
+                telegram_user_id=tg_id,
+                telegram_username=username,
+                language_code=lang,
+                is_premium=premium,
             )
+            intent = None
+            extra_cid = None
+            if payload.startswith("t") and len(payload) >= 5:
+                intent = await consume_intent(session, payload[1:])
+            elif payload.startswith("c") and payload[1:].isdigit():
+                extra_cid = payload[1:]
+            apply_tracking_to_client(client, intent, metrika_cid=extra_cid)
             await session.commit()
+            cid = metrika_cid_for(client.metrika_client_id, tg_id)
+            visit = {
+                "funnel": "bot_started",
+                "telegram": {
+                    "lang": lang or "",
+                    "premium": "1" if premium else "0",
+                    "has_username": "1" if username else "0",
+                },
+            }
+            if client.yclid:
+                visit["yclid"] = client.yclid
+            if client.utm_json:
+                try:
+                    visit["utm"] = json.loads(client.utm_json)
+                except Exception:
+                    pass
+            if cid:
+                await track_pageview(
+                    settings,
+                    cid=cid,
+                    path="/bot/start",
+                    title="Бот: старт",
+                    params=visit,
+                    referrer=client.landing_url,
+                )
+                await track_goal(settings, cid=cid, goal="bot_started", params=visit, path="/bot/start")
+
+    await _send(settings, chat_id, WELCOME, PAY_KB)
 
 
 async def _handle_callback(settings: Settings, cb: dict[str, Any]) -> None:
@@ -123,6 +165,8 @@ async def _handle_callback(settings: Settings, cb: dict[str, Any]) -> None:
     tg_id = from_user.get("id")
     username = from_user.get("username")
     name = " ".join(x for x in [from_user.get("first_name"), from_user.get("last_name")] if x)
+    lang = from_user.get("language_code")
+    premium = bool(from_user.get("is_premium"))
 
     async with SessionLocal() as session:
         paid = await latest_succeeded_for_telegram(session, tg_id) if tg_id else None
@@ -146,6 +190,23 @@ async def _handle_callback(settings: Settings, cb: dict[str, Any]) -> None:
                 "Оплата сейчас недоступна. Напиши сюда ещё раз через минуту.",
             )
             return
+        client = payment.client
+        if client:
+            if lang:
+                client.language_code = lang
+            if premium is not None:
+                client.is_premium = 1 if premium else 0
+            await session.commit()
+        cid = metrika_cid_for(client.metrika_client_id if client else None, tg_id)
+        if cid:
+            await track_goal(
+                settings,
+                cid=cid,
+                goal="payment_started",
+                params={"funnel": "payment_started", "order_id": payment.order_id},
+                path="/bot/pay",
+            )
+            await track_add_to_cart(settings, cid=cid, amount=settings.price_rubles)
 
     if not payment.confirmation_url:
         await _send(settings, chat_id, "Не удалось создать платёж. Попробуй ещё раз.")

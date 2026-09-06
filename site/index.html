@@ -7,6 +7,23 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<!-- Yandex.Metrika counter -->
+<script type="text/javascript">
+    window.dataLayer = window.dataLayer || [];
+    (function(m,e,t,r,i,k,a){
+        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
+        m[i].l=1*new Date();
+        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
+        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
+    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=112323537', 'ym');
+    ym(112323537, 'init', {
+        ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer",
+        referrer: document.referrer, url: location.href,
+        accurateTrackBounce:true, trackLinks:true, triggerEvent:true
+    });
+</script>
+<noscript><div><img src="https://mc.yandex.ru/watch/112323537" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
+<!-- /Yandex.Metrika counter -->
 <style>
 :root{
   --cream:#f4eee6;
@@ -265,12 +282,91 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
 </footer>
 
 <script>
-const BOT = "https://t.me/teacher_life_bot?start=site";
+const YM = 112323537;
+const BOT_USER = "teacher_life_bot";
+const LIFE_API = window.LIFE_API || "";
+
+function ymGoal(name, price){
+  if (typeof ym !== "function") return;
+  const params = price != null ? {order_price: price, currency: "RUB"} : undefined;
+  ym(YM, "reachGoal", name, params);
+}
+
+function getClientID(){
+  return new Promise(resolve => {
+    if (typeof ym !== "function") return resolve("");
+    try { ym(YM, "getClientID", id => resolve(id || "")); }
+    catch { resolve(""); }
+  });
+}
+
+async function openBot(e){
+  e.preventDefault();
+  const qs = new URLSearchParams(location.search);
+  const cid = await getClientID();
+  ymGoal("click_to_telegram", 500);
+  let start = cid && /^\d+$/.test(cid) ? ("c" + cid) : "site";
+  try {
+    const r = await fetch(LIFE_API + "/api/intent", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        metrika_client_id: cid,
+        yclid: qs.get("yclid") || "",
+        utm_source: qs.get("utm_source") || "",
+        utm_medium: qs.get("utm_medium") || "",
+        utm_campaign: qs.get("utm_campaign") || "",
+        utm_content: qs.get("utm_content") || "",
+        utm_term: qs.get("utm_term") || "",
+        landing_url: location.href,
+        referrer: document.referrer
+      })
+    });
+    if (r.ok) {
+      const d = await r.json();
+      if (d.start) start = d.start;
+    }
+  } catch (err) { /* офлайн API — уходим с cid в start */ }
+  location.href = "https://t.me/" + BOT_USER + "?start=" + encodeURIComponent(start);
+}
+
 const payCta = document.getElementById("payCta");
-payCta.href = BOT;
-payCta.addEventListener("click", () => {
-  if (typeof ym === "function") ym(112323537, "reachGoal", "go_telegram");
+payCta.addEventListener("click", openBot);
+
+document.addEventListener("yacounter" + YM + "inited", () => {
+  const qs = new URLSearchParams(location.search);
+  ym(YM, "userParams", {
+    landing: "home",
+    has_yclid: qs.get("yclid") ? "1" : "0",
+    utm_source: qs.get("utm_source") || "",
+    utm_campaign: qs.get("utm_campaign") || ""
+  });
+  ym(YM, "params", {
+    page: location.pathname,
+    utm_source: qs.get("utm_source") || "",
+    utm_medium: qs.get("utm_medium") || "",
+    utm_campaign: qs.get("utm_campaign") || ""
+  });
 });
+
+(function watchOffer(){
+  const el = document.getElementById("purchase");
+  if (!el || !("IntersectionObserver" in window)) return;
+  let sent = false;
+  const io = new IntersectionObserver(entries => {
+    if (sent || !entries.some(x => x.isIntersecting && x.intersectionRatio >= 0.35)) return;
+    sent = true;
+    ymGoal("view_offer", 100);
+    window.dataLayer.push({
+      ecommerce: {
+        currencyCode: "RUB",
+        detail: { products: [{ id: "vs-program", name: "Программа Верни себе себя", price: 50000, quantity: 1 }] }
+      }
+    });
+    io.disconnect();
+  }, {threshold: [0.35]});
+  io.observe(el);
+})();
 
 const follow = document.getElementById("follow");
 function placeFollow(x, y){
@@ -301,18 +397,5 @@ document.querySelectorAll(".lines button").forEach(btn => {
   });
 });
 </script>
-<!-- Yandex.Metrika counter -->
-<script type="text/javascript">
-    (function(m,e,t,r,i,k,a){
-        m[i]=m[i]||function(){(m[i].a=m[i].a||[]).push(arguments)};
-        m[i].l=1*new Date();
-        for (var j = 0; j < document.scripts.length; j++) {if (document.scripts[j].src === r) { return; }}
-        k=e.createElement(t),a=e.getElementsByTagName(t)[0],k.async=1,k.src=r,a.parentNode.insertBefore(k,a)
-    })(window, document,'script','https://mc.yandex.ru/metrika/tag.js?id=112323537', 'ym');
-
-    ym(112323537, 'init', {ssr:true, webvisor:true, clickmap:true, ecommerce:"dataLayer", referrer: document.referrer, url: location.href, accurateTrackBounce:true, trackLinks:true});
-</script>
-<noscript><div><img src="https://mc.yandex.ru/watch/112323537" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
-<!-- /Yandex.Metrika counter -->
 </body>
 </html>

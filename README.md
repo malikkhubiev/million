@@ -16,9 +16,9 @@ cd site
 # открыть index.html или любой static host
 ```
 
-Кнопка «Вернуть себе себя» ведёт на `https://t.me/teacher_life_bot?start=site`.
+Кнопка «Вернуть себе себя» передаёт в бота ClientID Метрики (склейка визита сайта и Telegram).
 
-Яндекс.Метрика: `112323537`.
+Яндекс.Метрика `112323537`. Цели: `view_offer` (100), `click_to_telegram` (500), `bot_started` (2000), `payment_started` (15000), `payment_success` (50000 ₽ + ecommerce). Подробности в `site/README.md`.
 
 ## Бот (`server/`)
 

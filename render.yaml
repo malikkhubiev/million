@@ -31,3 +31,7 @@ services:
         generateValue: true
       - key: SECRET_KEY
         generateValue: true
+      - key: METRIKA_COUNTER_ID
+        value: "112323537"
+      - key: METRIKA_MP_TOKEN
+        sync: false

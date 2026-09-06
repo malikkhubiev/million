@@ -19,6 +19,14 @@ class Client(Base):
     email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True, index=True)
     telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, unique=True, index=True)
     telegram_username: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    language_code: Mapped[Optional[str]] = mapped_column(String(16), nullable=True)
+    is_premium: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    metrika_client_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    yclid: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    utm_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    landing_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    referrer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
@@ -75,6 +83,24 @@ class InviteLink(Base):
 
     payment: Mapped[Payment] = relationship(back_populates="invites")
     client: Mapped[Client] = relationship(back_populates="invites")
+
+
+class TrackingSession(Base):
+    """Короткий токен в t.me/?start= (лимит 64 символа) → ClientID Метрики и UTM."""
+
+    __tablename__ = "tracking_sessions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    token: Mapped[str] = mapped_column(String(16), unique=True, index=True, nullable=False)
+    metrika_client_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    yclid: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    utm_json: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    landing_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    referrer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    consumed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 
 class WebhookEvent(Base):

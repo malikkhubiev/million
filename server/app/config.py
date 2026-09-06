@@ -51,6 +51,14 @@ class Settings(BaseSettings):
 
     site_dir: str = ""
 
+    metrika_counter_id: int = 112323537
+    metrika_mp_token: str = ""
+    metrika_collect_url: str = "https://mc.yandex.ru/collect"
+
+    @property
+    def is_metrika_configured(self) -> bool:
+        return bool(self.metrika_counter_id and self.metrika_mp_token)
+
     @property
     def site_path(self) -> Path:
         if self.site_dir:
