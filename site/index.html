@@ -86,7 +86,7 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
   inset:0;
   z-index:-1;
   background:#fff;
-  transform:translateX(-102%);
+  transform:translateY(102%);
   transition:transform .85s cubic-bezier(.19,1,.22,1);
 }
 .word:hover{
@@ -94,7 +94,7 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
   border-color:#fff;
   transform:translateY(-2px);
 }
-.word:hover i{transform:translateX(0)}
+.word:hover i{transform:translateY(0)}
 @media (prefers-reduced-motion:reduce){
   .word,.word i{transition:none}
 }
@@ -133,26 +133,30 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
   .manifesto-inner,.cards{grid-template-columns:1fr}
   .mosaic{
     height:auto;
-    display:grid;
-    grid-template-columns:1fr 1fr;
-    gap:12px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:56px;
+    padding:28px 0 48px;
     margin-top:48px;
   }
   .polaroid{
     position:relative;
-    width:100% !important;
     left:auto !important;
     right:auto !important;
     top:auto !important;
     bottom:auto !important;
-    transform:none !important;
-    aspect-ratio:3/4;
+    width:68% !important;
   }
-  .polaroid:hover{transform:scale(1.02) !important}
-  .p2,.p5{aspect-ratio:3/4}
-  .p3{grid-column:1 / -1;width:52% !important;aspect-ratio:1;margin:0 auto;justify-self:center}
+  .p1{transform:rotate(-8deg)}
+  .p2{width:78% !important;transform:rotate(3deg)}
+  .p3{width:52% !important;transform:rotate(6deg)}
+  .p4{transform:rotate(7deg)}
+  .p5{width:74% !important;transform:rotate(-4deg)}
+  .p6{width:60% !important;transform:rotate(9deg)}
+  .polaroid:hover{transform:scale(1.04) rotate(0deg)!important}
+  #follow{width:132px;height:174px;z-index:95}
   body.following{cursor:auto}
-  body.following #follow{display:none}
   .lines button{cursor:pointer}
 }
 </style>
@@ -268,16 +272,26 @@ const BOT = "https://t.me/teacher_life_bot?start=site";
 document.getElementById("payCta").href = BOT;
 
 const follow = document.getElementById("follow");
+function placeFollow(x, y){
+  const mobile = window.matchMedia("(max-width:860px)").matches;
+  const w = mobile ? 132 : 176;
+  const h = mobile ? 174 : 230;
+  const left = Math.min(window.innerWidth - w - 10, Math.max(8, x + 16));
+  const top = Math.min(window.innerHeight - h - 10, Math.max(8, y - h * 0.45));
+  follow.style.transform = `translate3d(${left}px, ${top}px, 0)`;
+}
 document.querySelectorAll(".lines button").forEach(btn => {
-  btn.addEventListener("mouseenter", () => {
-    if (window.matchMedia("(max-width:860px)").matches) return;
+  const show = (x, y) => {
     follow.src = btn.dataset.img;
     document.body.classList.add("following");
+    placeFollow(x, y);
+  };
+  btn.addEventListener("pointerenter", e => show(e.clientX, e.clientY));
+  btn.addEventListener("pointermove", e => {
+    if (!document.body.classList.contains("following")) show(e.clientX, e.clientY);
+    else placeFollow(e.clientX, e.clientY);
   });
-  btn.addEventListener("mouseleave", () => document.body.classList.remove("following"));
-  btn.addEventListener("mousemove", e => {
-    follow.style.transform = `translate3d(${e.clientX + 18}px, ${e.clientY - 110}px, 0)`;
-  });
+  btn.addEventListener("pointerleave", () => document.body.classList.remove("following"));
 });
 </script>
 <!-- Yandex.Metrika counter -->
