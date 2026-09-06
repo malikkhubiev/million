@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Доступ · Верни себе себя</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--cream:#f4eee6;--ink:#161411;--gold:#b07a3a;--muted:#6a635a}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Outfit,sans-serif;background:radial-gradient(circle at 50% 0,#fffdf8,var(--cream) 55%);color:var(--ink);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px}
+.box{width:min(520px,100%);text-align:center}
+.kicker{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
+h1{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:clamp(36px,7vw,56px);line-height:.95;margin-bottom:16px}
+p{color:var(--muted);line-height:1.6;margin:10px 0}
+.spin{width:46px;height:46px;border:2px solid #ddd;border-top-color:var(--ink);border-radius:50%;margin:28px auto;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.invite{display:none;margin-top:22px}
+.invite.show{display:block}
+.invite a{display:inline-block;background:var(--ink);color:#f7f1e8;text-decoration:none;padding:16px 28px;font:600 12px/1 Outfit,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-top:12px}
+.invite a:hover{background:#2a2420}
+.order{font-size:13px;color:#8a837a;margin-top:18px}
+.back{display:inline-block;margin-top:28px;font-size:13px;color:var(--gold)}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="kicker">Оплата</div>
+  <h1 id="title">Проверяем платёж…</h1>
+  <p id="sub">Это займёт несколько секунд. Не закрывайте страницу.</p>
+  <div class="spin" id="spin"></div>
+  <div class="invite" id="inviteBox">
+    <p>Ваша персональная ссылка в закрытый Telegram-канал:</p>
+    <a id="inviteLink" href="#" target="_blank" rel="noopener">Открыть канал</a>
+    <p style="margin-top:16px;font-size:14px">Ссылка рассчитана на одного человека. Сохраните её. Если потеряете — напишите боту номер заказа.</p>
+  </div>
+  <p class="order" id="orderLine"></p>
+  <a class="back" href="/">← На главную</a>
+</div>
+<script>
+const params = new URLSearchParams(location.search);
+const orderId = (params.get("order") || "").toUpperCase();
+const title = document.getElementById("title");
+const sub = document.getElementById("sub");
+const spin = document.getElementById("spin");
+const inviteBox = document.getElementById("inviteBox");
+const inviteLink = document.getElementById("inviteLink");
+const orderLine = document.getElementById("orderLine");
+
+if (!orderId) {
+  title.textContent = "Заказ не найден";
+  sub.textContent = "Вернитесь на главную и оформите оплату снова.";
+  spin.style.display = "none";
+} else {
+  orderLine.textContent = "Заказ " + orderId;
+  let tries = 0;
+  const poll = async () => {
+    tries += 1;
+    try {
+      const res = await fetch("/api/orders/" + encodeURIComponent(orderId) + "?sync=true");
+      if (res.status === 404) {
+        title.textContent = "Заказ не найден";
+        sub.textContent = "Проверьте ссылку или напишите в поддержку.";
+        spin.style.display = "none";
+        return;
+      }
+      const data = await res.json();
+      if (data.paid && data.invite_url) {
+        title.textContent = "Оплата подтверждена.";
+        sub.textContent = "Доступ открыт. Перейдите в закрытый канал.";
+        spin.style.display = "none";
+        inviteLink.href = data.invite_url;
+        inviteBox.classList.add("show");
+        return;
+      }
+      if (data.status === "canceled") {
+        title.textContent = "Оплата отменена";
+        sub.textContent = "Средства не списаны. Можно оформить заказ снова.";
+        spin.style.display = "none";
+        return;
+      }
+      if (data.paid && !data.invite_url) {
+        title.textContent = "Оплата прошла";
+        sub.textContent = "Готовим пригласительную ссылку… Ещё момент.";
+      }
+    } catch (e) {
+      /* retry */
+    }
+    if (tries < 40) setTimeout(poll, 2000);
+    else {
+      title.textContent = "Ещё обрабатываем";
+      sub.textContent = "Оплата могла пройти. Напишите боту номер заказа " + orderId + " — пришлём ссылку.";
+      spin.style.display = "none";
+    }
+  };
+  poll();
+}
+</script>
+</body>
+</html>
