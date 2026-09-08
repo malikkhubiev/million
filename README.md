@@ -16,9 +16,21 @@ cd site
 # открыть index.html или любой static host
 ```
 
-Кнопка «Вернуть себе себя» передаёт в бота ClientID Метрики (склейка визита сайта и Telegram).
+Кнопки лендинга передают в бота ClientID Метрики (склейка визита сайта и Telegram).
 
-Яндекс.Метрика `112323537`. Цели: `view_offer` (100), `click_to_telegram` (500), `bot_started` (2000), `payment_started` (15000), `payment_success` (50000 ₽ + ecommerce). Подробности в `site/README.md`.
+Содержимое `site/` живёт в корне репозитория [life_energy](https://github.com/malikkhubiev/life_energy), откуда деплоится Vercel. Выкатка правок — зеркалим папку в клон того репозитория:
+
+```powershell
+git clone https://github.com/malikkhubiev/life_energy.git $env:TEMP\life_energy_sync
+robocopy site $env:TEMP\life_energy_sync /MIR /XD $env:TEMP\life_energy_sync\.git
+git -C $env:TEMP\life_energy_sync add -A
+git -C $env:TEMP\life_energy_sync commit -m "лендинг: что поменяли"
+git -C $env:TEMP\life_energy_sync push origin main
+```
+
+Отдельный remote на `life_energy` в этом репозитории намеренно не заведён: истории у репозиториев разные, и `git push life_energy main` залил бы туда весь проект вместо лендинга.
+
+Яндекс.Метрика `112323537`. Цели: `view_offer` (100), `click_to_telegram` (500), `bot_started` (2000), `diagnostic_started` (3000), `diagnostic_finished` (8000), `payment_started` (15000), `payment_success` (50000 ₽ + ecommerce). Подробности в `site/README.md`.
 
 ## Бот (`server/`)
 
@@ -57,7 +69,8 @@ Webhook ЮKassa: `https://<сервис>.onrender.com/api/yookassa/webhook`
 сайт → t.me/bot?start=site
          ↓
    бот знает telegram_user_id
-         ↓ кнопка «Вернуть себе себя»
+         ↓ диагностика: 5 вопросов → персональный разбор
+         ↓ кнопка «Записаться — 50 000 ₽»
    POST ЮKassa (Idempotence-Key) + metadata.telegram_user_id
          ↓
    клиент платит на ЮKassa
