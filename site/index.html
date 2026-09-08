@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Верни себе себя</title>
+<meta name="description" content="Программа управления состоянием. Не становись другой — научись возвращаться к себе. Набор до 20 сентября, старт 1 октября.">
 <link rel="icon" type="image/png" href="./img/fav/favicon-96x96.png" sizes="96x96" />
 <link rel="icon" type="image/svg+xml" href="./img/fav/favicon.svg" />
 <link rel="shortcut icon" href="./img/fav/favicon.ico" />
@@ -53,13 +54,16 @@ a{color:inherit}
 .kicker{font-size:11px;letter-spacing:.28em;text-transform:uppercase;color:var(--gold);margin-bottom:18px}
 h1{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(52px,9vw,96px);line-height:.9;letter-spacing:-.04em}
 h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);margin:22px auto 0}
-.sub{font-size:clamp(16px,2vw,20px);line-height:1.55;color:#3f3a34;max-width:460px;margin:22px auto 28px}
+.sub{font-size:clamp(16px,2vw,20px);line-height:1.55;color:#3f3a34;max-width:520px;margin:22px auto 10px}
+.sub b{font-weight:500}
+.hero-format{font-size:14px;line-height:1.6;color:var(--muted);max-width:460px;margin:0 auto 26px}
 .cta-row{display:flex;flex-direction:column;align-items:center;gap:14px}
 .buy{display:inline-flex;align-items:center;justify-content:center;background:var(--ink);color:#f7f1e8;border:0;padding:18px 34px;font:600 12px/1 Outfit,sans-serif;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;cursor:pointer;min-width:280px;transition:background .25s,transform .25s}
 .buy:hover{background:#2a2420;transform:translateY(-2px)}
 .buy.pulse{animation:pulse 2.8s ease-in-out infinite}
 @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(22,20,17,.18)}70%{box-shadow:0 0 0 16px rgba(22,20,17,0)}}
 .price{font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:500}
+.deadline{display:inline-block;margin-top:6px;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--terracotta)}
 
 .arrow{display:flex;justify-content:center;padding:28px 0 8px}
 .arrow a{width:96px;height:96px;border-radius:50%;border:1px solid rgba(22,20,17,.18);display:grid;place-items:center;text-decoration:none;animation:drop 2.2s ease-in-out infinite;background:rgba(255,255,255,.25)}
@@ -74,8 +78,21 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
 .emotion{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(40px,6.4vw,84px);line-height:.95;letter-spacing:-.04em}
 .fade{font-size:18px;line-height:1.7;color:var(--muted);max-width:560px;margin:28px auto 0}
 
+.recognize{padding:100px 22px 40px}
+.recognize .emotion{font-size:clamp(36px,5.6vw,68px)}
+.mirror{max-width:620px;margin:46px auto 0;text-align:left}
+.mirror p{font-size:clamp(16px,2vw,19px);line-height:1.55;color:#3f3a34;padding:18px 4px 18px 30px;border-bottom:1px solid rgba(22,20,17,.09);position:relative}
+.mirror p:before{content:"";position:absolute;left:4px;top:27px;width:9px;height:1px;background:var(--gold)}
+.mirror p:last-child{border-bottom:0}
+.mirror-note{max-width:620px;margin:34px auto 0;text-align:center;font-family:"Cormorant Garamond",serif;font-style:italic;font-size:clamp(22px,3vw,30px);line-height:1.35;color:var(--terracotta)}
+
 .feel{background:var(--dark);color:#f4efe7;padding:110px 22px 50px;position:relative;overflow:hidden}
 .feel .kicker{color:#d4b48a}
+.feel .fade{color:#b8b0a4}
+.states{max-width:640px;margin:34px auto 0;text-align:left}
+.states p{font-size:17px;line-height:1.6;color:#cdc5b8;padding:12px 0;border-bottom:1px solid rgba(247,241,232,.12)}
+.states p:last-child{border-bottom:0}
+.states b{color:#f4efe7;font-weight:500}
 .mosaic{position:relative;width:min(1080px,100%);height:min(78vw,720px);margin:70px auto 0}
 .polaroid{position:absolute;background:#f7f1e8;padding:10px 10px 36px;box-shadow:0 18px 50px rgba(0,0,0,.35);transition:transform .5s ease;z-index:1;overflow:hidden}
 .polaroid img{width:100%;height:100%;object-fit:cover;filter:saturate(1.12) contrast(1.05)}
@@ -126,18 +143,55 @@ h1:after{content:"";display:block;width:48px;height:1px;background:var(--gold);m
 .manifesto{padding:110px 22px 50px;background:linear-gradient(180deg,#e7dccb,#efe6d8)}
 .manifesto-inner{max-width:1100px;margin:auto;display:grid;grid-template-columns:1.05fr .95fr;gap:70px;align-items:center}
 .manifesto h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(40px,5.4vw,72px);line-height:.92;letter-spacing:-.045em}
+.manifesto .kicker{margin-bottom:14px}
 .lines{font-size:20px;line-height:1.15}
 .lines button{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid rgba(22,20,17,.14);padding:18px 8px;font:inherit;cursor:none;color:inherit;transition:color .25s,padding .25s}
 .lines button:hover{color:var(--terracotta);padding-left:18px}
+.lines small{display:block;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:6px}
 
 #follow{position:fixed;top:0;left:0;width:176px;height:230px;object-fit:cover;pointer-events:none;opacity:0;z-index:90;transform:translate3d(-240px,-240px,0);transition:opacity .18s;border:7px solid #f7f1e8;box-shadow:0 22px 50px rgba(0,0,0,.32);filter:saturate(1.18) contrast(1.04)}
 body.following{cursor:none}
 body.following #follow{opacity:1}
 
+.method{padding:100px 22px 40px}
+.method-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:1040px;margin:52px auto 0}
+.tile{background:#fff9f1;border:1px solid rgba(176,122,58,.18);padding:28px 24px 26px;text-align:center}
+.method-grid .tile:last-child{grid-column:2}
+.tile b{display:block;font-family:"Cormorant Garamond",serif;font-size:30px;font-weight:500;margin-bottom:12px}
+.tile p{font-size:15px;line-height:1.6;color:#4a453e}
+.method-note{max-width:600px;margin:44px auto 0;text-align:center;font-size:17px;line-height:1.7;color:var(--muted)}
+
+.author{padding:100px 22px 40px;background:linear-gradient(180deg,#efe6d8,#f4eee6)}
+.author-inner{max-width:1040px;margin:auto;display:grid;grid-template-columns:.85fr 1.15fr;gap:60px;align-items:center}
+.author-photo{position:relative}
+.author-photo img{width:100%;border-radius:2px;box-shadow:0 26px 60px rgba(40,28,16,.26)}
+.author h2{font-family:"Cormorant Garamond",Georgia,serif;font-weight:500;font-size:clamp(38px,5vw,62px);line-height:.95;letter-spacing:-.04em;margin-bottom:8px}
+.author-role{font-size:17px;line-height:1.6;color:#3f3a34;margin-bottom:26px}
+.facts{margin-bottom:26px}
+.facts p{font-size:15px;line-height:1.6;color:#4a453e;padding:11px 0 11px 26px;border-bottom:1px solid rgba(22,20,17,.09);position:relative}
+.facts p:before{content:"";position:absolute;left:0;top:20px;width:9px;height:1px;background:var(--gold)}
+.facts p:last-child{border-bottom:0}
+.author-quote{font-family:"Cormorant Garamond",serif;font-style:italic;font-size:clamp(20px,2.6vw,26px);line-height:1.4;color:var(--ink);border-left:1px solid var(--gold);padding-left:22px}
+
+.program{padding:100px 22px 40px}
+.steps{max-width:820px;margin:52px auto 0}
+.step{display:grid;grid-template-columns:120px 1fr;gap:26px;padding:26px 0;border-bottom:1px solid rgba(22,20,17,.1)}
+.step:last-child{border-bottom:0}
+.step-no{font-family:"Cormorant Garamond",serif;font-size:15px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);padding-top:6px}
+.step h3{font-family:"Cormorant Garamond",serif;font-weight:500;font-size:clamp(26px,3.4vw,34px);line-height:1.1;margin-bottom:10px}
+.step p{font-size:16px;line-height:1.65;color:#4a453e}
+
 .inside{padding:100px 22px 40px}
 .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;max-width:980px;margin:48px auto 0}
 .card{background:#fff9f1;padding:28px 22px;text-align:center;border:1px solid rgba(176,122,58,.18)}
 .card b{display:block;font-family:"Cormorant Garamond",serif;font-size:28px;font-weight:500;margin-bottom:8px}
+
+.dates{max-width:820px;margin:56px auto 0;display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.date-box{border:1px solid rgba(22,20,17,.14);padding:26px 24px;text-align:center;background:rgba(255,255,255,.4)}
+.date-box b{display:block;font-family:"Cormorant Garamond",serif;font-size:34px;font-weight:500;margin-bottom:6px}
+.date-box span{font-size:14px;line-height:1.55;color:var(--muted)}
+.date-box.accent{border-color:var(--terracotta)}
+.date-box.accent b{color:var(--terracotta)}
 
 .purchase{padding:110px 22px 130px;text-align:center;background:radial-gradient(circle at 50% 0,#fffdf8,var(--cream) 55%);position:relative}
 .purchase .kicker{margin-bottom:22px}
@@ -147,14 +201,19 @@ body.following #follow{opacity:1}
 .truths p{font-size:16px;line-height:1.7;color:#4a453e;padding:12px 0;border-bottom:1px solid rgba(22,20,17,.08)}
 .truths p:last-child{border-bottom:0}
 .price-big{font-family:"Cormorant Garamond",serif;font-size:clamp(52px,7vw,84px);margin:8px 0 6px}
-.price-note{font-size:14px;color:var(--muted);margin-bottom:28px}
+.price-note{font-size:14px;color:var(--muted);margin-bottom:28px;line-height:1.6}
 .cta-soft{margin-top:18px;font-size:13px;color:#8a837a;max-width:380px;margin-left:auto;margin-right:auto;line-height:1.55}
 .fine{font-size:12px;color:#8a837a;max-width:420px;margin:22px auto 0;line-height:1.5}
 
 footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:28px 8%;font-size:13px;color:#7a746c;border-top:1px solid rgba(0,0,0,.06)}
 
 @media(max-width:860px){
-  .manifesto-inner,.cards{grid-template-columns:1fr}
+  .manifesto-inner,.cards,.method-grid,.author-inner,.dates{grid-template-columns:1fr}
+  .method-grid .tile:last-child{grid-column:auto}
+  .author-inner{gap:38px}
+  .author-photo{max-width:420px;margin:0 auto}
+  .step{grid-template-columns:1fr;gap:8px}
+  .step-no{padding-top:0}
   .mosaic{
     height:460vw;
     margin-top:56px;
@@ -191,10 +250,12 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
   </div>
   <div class="kicker">Авторская программа</div>
   <h1>Верни себе<br>себя.</h1>
-  <p class="sub">Больше энергии. Больше спокойствия.<br>Настоящее удовольствие от собственной жизни.</p>
+  <p class="sub">Перестань жить на автопилоте. Верни энергию, спокойствие и способность <b>выбирать, как тебе жить</b>, — а не действовать по привычке.</p>
+  <p class="hero-format">Две недели: аудиопрограмма, якоря состояния и система ежедневных изменений.</p>
   <div class="cta-row">
-    <a class="buy" href="#purchase">Начать сейчас</a>
+    <a class="buy js-bot" href="https://t.me/teacher_life_bot?start=site">Начать трансформацию</a>
     <div class="price">50 000 ₽</div>
+    <span class="deadline">Набор до 20 сентября · старт 1 октября</span>
   </div>
 </section>
 
@@ -204,7 +265,7 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
   <div class="center">
     <div class="kicker">Одна мысль</div>
     <div class="emotion">Тебе не нужно становиться другой.</div>
-    <p class="fade">Тебе нужно снова почувствовать ту себя, которая знает, чего хочет, умеет наслаждаться жизнью и не живёт на автопилоте.</p>
+    <p class="fade">Это не курс о том, как стать лучше. Это система, которая помогает вернуть контакт с собой — своим телом, желаниями, энергией и вниманием.</p>
   </div>
 </section>
 
@@ -212,39 +273,162 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
 
 <section class="feel" id="feel">
   <div class="center">
-    <div class="kicker">Ты хочешь</div>
-    <div class="emotion">Не успевать больше.<br>А чувствовать больше.</div>
+    <div class="kicker">Главное</div>
+    <div class="emotion">Ты не ленивая.<br>Тобой управляет состояние.</div>
+    <div class="states">
+      <p>Когда ты <b>устала</b> — ты выбираешь одно.</p>
+      <p>Когда <b>тревожишься</b> — другое.</p>
+      <p>Когда <b>перевозбуждена</b> — третье.</p>
+      <p>Когда <b>спокойна</b> — совершенно другое.</p>
+    </div>
+    <p class="fade">Поэтому бессмысленно бесконечно заставлять себя. Ты слишком долго пыталась изменить поведение, не меняя состояние, из которого это поведение возникает.</p>
     <div class="words">
-      <span class="word"><i></i>энергию</span>
-      <span class="word"><i></i>спокойствие</span>
-      <span class="word"><i></i>уверенность</span>
-      <span class="word"><i></i>концентрацию</span>
-      <span class="word"><i></i>свободу</span>
+      <span class="word"><i></i>энергия</span>
+      <span class="word"><i></i>внимание</span>
+      <span class="word"><i></i>импульсы</span>
+      <span class="word"><i></i>эмоции</span>
+      <span class="word"><i></i>тело</span>
       <span class="word"><i></i>удовольствие</span>
     </div>
   </div>
   <div class="mosaic" aria-label="Галерея состояния">
-    <figure class="polaroid p1"><img src="img/woman-1.jpg" alt=""><span>присутствие</span></figure>
-    <figure class="polaroid p2"><img src="img/woman-8.jpg" alt=""><span>тепло</span></figure>
-    <figure class="polaroid p3"><img src="img/woman-3.jpg" alt=""><span></span></figure>
-    <figure class="polaroid p4"><img src="img/woman-4.jpg" alt=""><span>свобода</span></figure>
-    <figure class="polaroid p5"><img src="img/woman-5.jpg" alt=""><span>ритуал</span></figure>
-    <figure class="polaroid p6"><img src="img/woman-6.jpg" alt=""><span>сила</span></figure>
+    <figure class="polaroid p1"><img src="img/woman-1.jpg" alt="" loading="lazy" decoding="async"><span>присутствие</span></figure>
+    <figure class="polaroid p2"><img src="img/woman-8.jpg" alt="" loading="lazy" decoding="async"><span>тепло</span></figure>
+    <figure class="polaroid p3"><img src="img/woman-3.jpg" alt="" loading="lazy" decoding="async"><span></span></figure>
+    <figure class="polaroid p4"><img src="img/woman-4.jpg" alt="" loading="lazy" decoding="async"><span>свобода</span></figure>
+    <figure class="polaroid p5"><img src="img/woman-5.jpg" alt="" loading="lazy" decoding="async"><span>ритуал</span></figure>
+    <figure class="polaroid p6"><img src="img/woman-6.jpg" alt="" loading="lazy" decoding="async"><span>сила</span></figure>
   </div>
 </section>
 
-<div class="arrow light"><a href="#manifesto" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+<div class="arrow"><a href="#recognize" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+
+<section class="recognize" id="recognize">
+  <div class="center">
+    <div class="kicker">С чем ты пришла</div>
+    <div class="emotion">Возможно, ты<br>узнаешь себя.</div>
+  </div>
+  <div class="mirror">
+    <p>Просыпаешься уже уставшей.</p>
+    <p>Постоянно отвлекаешься и теряешь день по кусочкам.</p>
+    <p>Берёшь телефон автоматически, ещё до того, как решила.</p>
+    <p>Сложно заставить себя делать важное — и легко делать необязательное.</p>
+    <p>Настроение управляет твоим днём, а не ты им.</p>
+    <p>Постоянно нужно себя мотивировать, чтобы просто жить свою жизнь.</p>
+    <p>Много понимаешь про себя, но мало меняется.</p>
+    <p>Внешне всё нормально, а ощущения жизни внутри всё меньше.</p>
+    <p>Хочется снова чувствовать удовольствие от обычного дня.</p>
+    <p>Хочется не «чинить себя», а наконец почувствовать себя собой.</p>
+  </div>
+  <p class="mirror-note">Если ты дочитала этот список до конца — дело не в силе воли.</p>
+</section>
+
+<div class="arrow"><a href="#manifesto" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
 
 <section class="manifesto" id="manifesto">
   <div class="manifesto-inner">
-    <h2>Когда ты управляешь своим состоянием — жизнь ощущается иначе.</h2>
+    <div>
+      <div class="kicker">Что изменится</div>
+      <h2>Когда ты управляешь своим состоянием — жизнь ощущается иначе.</h2>
+    </div>
     <div class="lines">
-      <button type="button" data-img="img/manifesto-1.jpg">Просыпаться с желанием жить.</button>
-      <button type="button" data-img="img/manifesto-2.jpg">Не зависеть от настроения.</button>
-      <button type="button" data-img="img/manifesto-3.jpg">Уметь остановиться.</button>
-      <button type="button" data-img="img/manifesto-4.jpg">Уметь сосредоточиться.</button>
-      <button type="button" data-img="img/manifesto-5.jpg">Выбирать, а не действовать автоматически.</button>
-      <button type="button" data-img="img/manifesto-6.jpg">Иметь энергию на то, что действительно важно.</button>
+      <button type="button" data-img="img/manifesto-1.jpg"><small>Утро</small>Не нужно час заставлять себя встать.</button>
+      <button type="button" data-img="img/manifesto-2.jpg"><small>Телефон</small>Ты замечаешь импульс открыть его — и можешь не открывать.</button>
+      <button type="button" data-img="img/manifesto-3.jpg"><small>Работа</small>Ты погружаешься в дело без постоянной борьбы с собой.</button>
+      <button type="button" data-img="img/manifesto-4.jpg"><small>Эмоции</small>Ты не обязана автоматически следовать каждому состоянию.</button>
+      <button type="button" data-img="img/manifesto-5.jpg"><small>Тело</small>Ты снова чувствуешь его, а не просто существуешь в голове.</button>
+      <button type="button" data-img="img/manifesto-6.jpg"><small>Жизнь</small>Ты замечаешь удовольствие там, где раньше выполняла пункт списка.</button>
+    </div>
+  </div>
+</section>
+
+<div class="arrow"><a href="#method" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+
+<section class="method" id="method">
+  <div class="center">
+    <div class="kicker">Методология</div>
+    <div class="emotion">Управление состоянием.</div>
+    <p class="fade">Семь областей, из которых складывается то, как ты живёшь свой день. Мы разбираем каждую — и возвращаем управление тебе.</p>
+  </div>
+  <div class="method-grid">
+    <div class="tile"><b>Энергия</b><p>Почему её нет, куда она утекает и как её восстанавливать — без обещаний «просто высыпайся».</p></div>
+    <div class="tile"><b>Внимание</b><p>Телефон, информационный шум, разорванный день. Как вернуть способность быть в одном деле целиком.</p></div>
+    <div class="tile"><b>Импульсы</b><p>Зависание, переедание, соцсети, откладывание. Что запускает автоматическое действие и как поймать его до, а не после.</p></div>
+    <div class="tile"><b>Эмоции</b><p>Тревога, раздражение, подавленность, качели. Как перестать быть их продолжением.</p></div>
+    <div class="tile"><b>Тело</b><p>Сон, движение, дыхание, ощущения. Возврат в тело как базовый инструмент управления состоянием.</p></div>
+    <div class="tile"><b>Сознание</b><p>Наблюдать за собой, замечать автоматические реакции, выбирать действие — вместо привычного сценария.</p></div>
+    <div class="tile"><b>Жизнь</b><p>Удовольствие, отношения, реализация и собственные желания — то, ради чего всё остальное.</p></div>
+  </div>
+  <p class="method-note">Я не предлагаю тебе верить в вибрации. Я предлагаю проверить на себе.</p>
+</section>
+
+<div class="arrow"><a href="#author" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+
+<section class="author" id="author">
+  <div class="author-inner">
+    <div class="author-photo"><img src="img/me.png" alt="Малик Хубиев" loading="lazy" decoding="async"></div>
+    <div>
+      <div class="kicker">Автор</div>
+      <h2>Малик Хубиев</h2>
+      <p class="author-role">Исследователь мышления и практик изменения состояния.</p>
+      <div class="facts">
+        <p>7+ лет в разработке и AI/ML. AI Systems Engineer.</p>
+        <p>Автор научной публикации и собственной статистической метрики.</p>
+        <p>1000+ часов преподавания и менторинга.</p>
+        <p>Консультирую предпринимателей, директоров и бизнесменов.</p>
+        <p>Изучаю психологию мышления, формирование понятий и причинно-следственные связи.</p>
+      </div>
+      <p class="author-quote">Моя задача — не убедить тебя поверить. А помочь тебе увидеть, проверить и изменить то, что происходит с тобой на практике.</p>
+    </div>
+  </div>
+</section>
+
+<div class="arrow"><a href="#program" aria-label="Дальше"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 4v16M5 13l7 7 7-7"/></svg></a></div>
+
+<section class="program" id="program">
+  <div class="center">
+    <div class="kicker">Программа обучения</div>
+    <div class="emotion">Как проходит<br>трансформация.</div>
+    <p class="fade">Две недели. Первая — увидеть, что управляет тобой на самом деле. Вторая — научиться управлять этим самой.</p>
+  </div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-no">Дни 1–3</div>
+      <div>
+        <h3>Точка, в которой ты сейчас</h3>
+        <p>Из какого состояния ты живёшь свой день и что оно решает за тебя. Куда уходит энергия — по-настоящему, а не по списку из интернета. Первая карта твоих утечек.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-no">Дни 4–7</div>
+      <div>
+        <h3>Тело и внимание</h3>
+        <p>Сон, дыхание, движение — механизмы, из которых состояние собирается физически. И телефон, шум, десять вкладок в голове: возвращаем способность быть в одном деле целиком.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-no">Дни 8–11</div>
+      <div>
+        <h3>Импульсы и эмоции</h3>
+        <p>Залипание, еда, откладывание — учимся видеть импульс до того, как он стал поступком. Тревога, раздражение, качели — проживать состояние, не становясь им.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-no">Дни 12–14</div>
+      <div>
+        <h3>Своя жизнь</h3>
+        <p>Желания, удовольствие, отношения, реализация. Собираем всё в систему, которой ты пользуешься каждый день — и после того, как программа закончилась.</p>
+      </div>
+    </div>
+  </div>
+  <div class="dates">
+    <div class="date-box accent">
+      <b>20 сентября</b>
+      <span>Закрывается набор. Дальше — только следующий поток.</span>
+    </div>
+    <div class="date-box">
+      <b>1 октября</b>
+      <span>Старт обучения. Доступ в закрытый канал приходит сразу после оплаты.</span>
     </div>
   </div>
 </section>
@@ -253,14 +437,14 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
 
 <section class="inside" id="inside">
   <div class="center">
-    <div class="kicker">Внутри</div>
+    <div class="kicker">Формат</div>
     <div class="emotion">Голос. Практика. Опыт.</div>
-    <p class="fade">Аудиоуроки, PDF-чек-листы и практические задания. Можно слушать курс в дороге, на прогулке или дома.</p>
+    <p class="fade">Тебе не нужно выделять два часа вечером на обучение. Аудио можно слушать утром, в машине, на прогулке, по дороге или перед сном.</p>
   </div>
   <div class="cards">
-    <div class="card"><b>Аудио</b>уроки, которые возвращают в тело</div>
-    <div class="card"><b>PDF</b>чек-листы и якоря на каждый день</div>
-    <div class="card"><b>Задания</b>практики, которые закрепляют состояние</div>
+    <div class="card"><b>Аудио</b>уроки моим голосом, которые возвращают в тело</div>
+    <div class="card"><b>Якоря</b>короткие PDF-опоры состояния на каждый день</div>
+    <div class="card"><b>Практики</b>задания, которые закрепляют новое состояние</div>
   </div>
 </section>
 
@@ -272,13 +456,13 @@ footer{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;paddin
   <p class="lead">Не чтобы стать другой. Чтобы снова почувствовать ту себя, которая живёт — а не справляется.</p>
   <div class="truths">
     <p>Каждое утро на автопилоте стоит дороже, чем эта программа.</p>
-    <p>Энергия, спокойствие и ясность не приходят «когда-нибудь». Их выбирают.</p>
-    <p>Доступ откроется сразу. Одна кнопка — и ты внутри.</p>
+    <p>50 000 ₽ — это не цена информации. Это цена структурированной трансформации.</p>
+    <p>Ты могла бы годами сама разбираться, почему с тобой происходит то, что происходит.</p>
   </div>
   <div class="price-big">50 000 ₽</div>
-  <p class="price-note">Инвестиция в состояние, из которого строится вся жизнь</p>
-  <a class="buy pulse" id="payCta" href="https://t.me/teacher_life_bot?start=site">Вернуть себе себя</a>
-  <p class="cta-soft">Оплата в Telegram за несколько секунд. Ссылка в закрытый канал придёт автоматически.</p>
+  <p class="price-note">Набор закрывается 20 сентября. Старт 1 октября.<br>Инвестиция в состояние, из которого строится вся жизнь.</p>
+  <a class="buy pulse js-bot" id="payCta" href="https://t.me/teacher_life_bot?start=site">Записаться на программу</a>
+  <p class="cta-soft">В боте — короткая диагностика на 2 минуты: что именно сейчас забирает твою энергию. Дальше оплата и доступ в закрытый канал.</p>
   <p class="fine">Нажимая кнопку, вы принимаете <a href="offer.html">оферту</a> на доступ к программе «Верни себе себя».</p>
 </section>
 
@@ -336,8 +520,7 @@ async function openBot(e){
   location.href = "https://t.me/" + BOT_USER + "?start=" + encodeURIComponent(start);
 }
 
-const payCta = document.getElementById("payCta");
-payCta.addEventListener("click", openBot);
+document.querySelectorAll(".js-bot").forEach(el => el.addEventListener("click", openBot));
 
 document.addEventListener("yacounter" + YM + "inited", () => {
   const qs = new URLSearchParams(location.search);

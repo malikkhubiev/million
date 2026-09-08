@@ -13,6 +13,8 @@ GOAL_VALUES = {
     "view_offer": 100,
     "click_to_telegram": 500,
     "bot_started": 2000,
+    "diagnostic_started": 3000,
+    "diagnostic_finished": 8000,
     "payment_started": 15000,
     "payment_success": 50000,
     "payment_canceled": 0,

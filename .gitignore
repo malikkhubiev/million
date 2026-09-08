@@ -11,3 +11,4 @@ data/*.db-*
 Thumbs.db
 .idea/
 .vscode/
+task.txt

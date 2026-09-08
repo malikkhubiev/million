@@ -29,7 +29,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
    - `TELEGRAM_WEBHOOK_SECRET`
    - `METRIKA_MP_TOKEN` (Measurement Protocol в настройках счётчика)
 
-Цели Метрики (JS-событие): `view_offer`, `click_to_telegram`, `bot_started`, `payment_started`, `payment_success`. Ценность 100 / 500 / 2000 / 15000 / 50000 ₽. Ecommerce purchase на успехе.
+Цели Метрики (JS-событие): `view_offer`, `click_to_telegram`, `bot_started`, `diagnostic_started`, `diagnostic_finished`, `payment_started`, `payment_success`. Ценность 100 / 500 / 2000 / 3000 / 8000 / 15000 / 50000 ₽. Ecommerce purchase на успехе.
 
 Webhook ЮKassa: `https://<сервис>.onrender.com/api/yookassa/webhook`
 
@@ -37,4 +37,10 @@ SQLite на free Render сбрасывается при редеплое — д�
 
 ## Цикл оплаты
 
-Клиент жмёт кнопку на сайте → открывается бот → «Вернуть себе себя» → ЮKassa → webhook `payment.succeeded` → invite в канал + сообщение в Telegram автоматически.
+Реклама → сайт (там вся программа обучения) → кнопка открывает бота → диагностика из 5 вопросов → персональный разбор и оффер → «Записаться — 50 000 ₽» → ЮKassa → webhook `payment.succeeded` → invite в канал + сообщение в Telegram автоматически.
+
+Даты набора и старта задаются переменными `ENROLLMENT_DEADLINE` и `COURSE_START_DATE` — бот подставляет их в тексты.
+
+## Диагностика в боте
+
+Вопросы и тексты разбора лежат в `app/services/bot.py`: `QUESTIONS`, `STATE_READ`, `TIMING_READ`, `ATTEMPT_READ`, `WANT_READ`. Состояние не хранится в БД — ответы едут в `callback_data` (`d|<номер вопроса>|<ответы>`), поэтому перезапуск сервиса не рвёт диалог.

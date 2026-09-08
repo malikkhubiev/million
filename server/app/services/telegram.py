@@ -93,6 +93,27 @@ class TelegramClient:
             payload["reply_markup"] = reply_markup
         return await self.call("sendMessage", **payload)
 
+    async def edit_message(
+        self,
+        chat_id: int | str,
+        message_id: int,
+        text: str,
+        *,
+        parse_mode: str | None = "HTML",
+        reply_markup: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "disable_web_page_preview": True,
+        }
+        if parse_mode:
+            payload["parse_mode"] = parse_mode
+        if reply_markup:
+            payload["reply_markup"] = reply_markup
+        return await self.call("editMessageText", **payload)
+
     async def answer_callback(self, callback_id: str, text: str | None = None) -> dict[str, Any]:
         body: dict[str, Any] = {"callback_query_id": callback_id}
         if text:

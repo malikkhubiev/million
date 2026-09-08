@@ -50,6 +50,10 @@ class Settings(BaseSettings):
     telegram_webhook_path: str = "/api/telegram/webhook"
 
     site_dir: str = ""
+    site_url: str = ""
+
+    enrollment_deadline: str = "20 сентября"
+    course_start_date: str = "1 октября"
 
     metrika_counter_id: int = 112323537
     metrika_mp_token: str = ""
@@ -91,6 +95,10 @@ class Settings(BaseSettings):
     @property
     def bot_link(self) -> str:
         return f"https://t.me/{self.telegram_bot_username}"
+
+    @property
+    def site_link(self) -> str:
+        return (self.site_url or self.app_base_url).rstrip("/")
 
     @property
     def cors_list(self) -> list[str]:
