@@ -12,7 +12,7 @@ from app.services.telegram import TelegramClient
 async def main() -> None:
     settings = get_settings()
     if not settings.telegram_bot_token:
-        raise SystemExit("Задайте TELEGRAM_BOT_TOKEN в server/.env")
+        raise SystemExit("Задайте TELEGRAM_BOT_TOKEN в .env")
 
     async with TelegramClient(settings) as tg:
         me = await tg.get_me()

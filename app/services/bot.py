@@ -142,8 +142,7 @@ def _question_text(index: int) -> str:
 def _offer_kb(settings: Settings) -> dict:
     return {
         "inline_keyboard": [
-            [{"text": "Записаться — 50 000 ₽", "callback_data": "pay"}],
-            [{"text": "Программа обучения", "url": settings.site_link + "/#program"}],
+            [{"text": "Начать трансформацию", "callback_data": "pay"}],
         ]
     }
 
