@@ -23,6 +23,10 @@ class Settings(BaseSettings):
 
     product_price_kopecks: int = 5_000_000
     product_title: str = "Программа «Верни себе себя»"
+    vip_diag_price_kopecks: int = 1_000_000
+    vip_diag_title: str = "VIP · диагностический созвон, 1 час"
+    vip_train_price_kopecks: int = 19_000_000
+    vip_train_title: str = "VIP · персональное обучение, 2 недели"
 
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"
 
@@ -79,6 +83,35 @@ class Settings(BaseSettings):
     @property
     def price_value(self) -> str:
         return f"{self.price_rubles:.2f}"
+
+    def product(self, code: str = "program") -> dict[str, str | int]:
+        catalog: dict[str, dict[str, str | int]] = {
+            "program": {
+                "code": "program",
+                "id": "vs-program",
+                "title": self.product_title,
+                "kopecks": self.product_price_kopecks,
+            },
+            "vip_diag": {
+                "code": "vip_diag",
+                "id": "vs-vip-diag",
+                "title": self.vip_diag_title,
+                "kopecks": self.vip_diag_price_kopecks,
+            },
+            "vip_train": {
+                "code": "vip_train",
+                "id": "vs-vip-train",
+                "title": self.vip_train_title,
+                "kopecks": self.vip_train_price_kopecks,
+            },
+        }
+        if code not in catalog:
+            raise ValueError(f"Неизвестный продукт: {code}")
+        item = dict(catalog[code])
+        kopecks = int(item["kopecks"])
+        item["rubles"] = kopecks / 100
+        item["amount_value"] = f"{kopecks / 100:.2f}"
+        return item
 
     @property
     def is_yookassa_configured(self) -> bool:

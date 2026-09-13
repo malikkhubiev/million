@@ -49,6 +49,7 @@ class YooKassaClient:
         return_url: str,
         metadata: dict[str, str],
         customer_email: str | None = None,
+        customer_phone: str | None = None,
         idempotence_key: str | None = None,
     ) -> dict[str, Any]:
         key = idempotence_key or str(uuid.uuid4())
@@ -59,7 +60,7 @@ class YooKassaClient:
             "description": description[:128],
             "metadata": metadata,
         }
-        if customer_email and self.settings.yookassa_vat_code is not None:
+        if self.settings.yookassa_vat_code is not None and (customer_email or customer_phone):
             item: dict[str, Any] = {
                 "description": description[:128],
                 "quantity": "1.00",
@@ -68,7 +69,12 @@ class YooKassaClient:
                 "payment_mode": "full_payment",
                 "payment_subject": "service",
             }
-            receipt: dict[str, Any] = {"customer": {"email": customer_email}, "items": [item]}
+            customer: dict[str, str] = {}
+            if customer_email:
+                customer["email"] = customer_email
+            if customer_phone:
+                customer["phone"] = customer_phone
+            receipt: dict[str, Any] = {"customer": customer, "items": [item]}
             if self.settings.yookassa_tax_system_code is not None:
                 receipt["tax_system_code"] = self.settings.yookassa_tax_system_code
             body["receipt"] = receipt

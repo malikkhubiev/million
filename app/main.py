@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, ORJSONResponse
+from fastapi.responses import FileResponse, ORJSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +16,7 @@ from pydantic import BaseModel
 from app.config import Settings, get_settings
 from app.db import SessionLocal, get_session, init_db
 from app.services.bot import PollingRunner, handle_bot_update
+from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
     get_payment_by_order,
     handle_yookassa_notification,
@@ -172,6 +173,71 @@ async def order_status(
         "invite_url": invite_url,
         "bot": settings.bot_link,
     }
+
+
+@app.get("/api/pay/{order_id}")
+async def pay_click_redirect(
+    order_id: str,
+    background: BackgroundTasks,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+):
+    """Клик «Оплатить» в боте → цель payment_started → ЮKassa."""
+    payment = await get_payment_by_order(session, order_id.upper())
+    if not payment or not payment.confirmation_url:
+        raise HTTPException(404, "Ссылка на оплату не найдена")
+    if payment.status == "succeeded":
+        return RedirectResponse(f"{settings.app_base_url.rstrip('/')}/success.html?order={payment.order_id}")
+
+    client = payment.client
+    cid = metrika_cid_for(
+        client.metrika_client_id if client else None,
+        client.telegram_user_id if client else None,
+    )
+    if cid:
+        background.add_task(
+            _track_pay_click,
+            settings,
+            cid,
+            payment.order_id,
+            payment.product_code or "program",
+            payment.amount_value,
+        )
+
+    return RedirectResponse(payment.confirmation_url, status_code=302)
+
+
+async def _track_pay_click(
+    settings: Settings,
+    cid: str,
+    order_id: str,
+    product_code: str,
+    amount_value: str | None,
+) -> None:
+    try:
+        product = settings.product(product_code or "program")
+        amount = float(amount_value or product["amount_value"])
+        await track_goal(
+            settings,
+            cid=cid,
+            goal="payment_started",
+            value=int(amount),
+            params={
+                "funnel": "payment_started",
+                "order_id": order_id,
+                "product_code": product_code or "program",
+            },
+            path="/bot/pay",
+        )
+        await track_add_to_cart(
+            settings,
+            cid=cid,
+            amount=amount,
+            product_id=str(product["id"]),
+            product_name=str(product["title"]),
+        )
+    except Exception:
+        logger.exception("metrika payment_started")
 
 
 @app.post(_settings.yookassa_webhook_path)

@@ -19,10 +19,20 @@ CLIENT_COLUMNS = {
     "landing_url": "TEXT",
     "referrer": "TEXT",
     "user_agent": "TEXT",
+    "diag_step": "INTEGER DEFAULT 0 NOT NULL",
+    "diag_answer_1": "TEXT",
+    "diag_answer_2": "TEXT",
+    "diag_answer_3": "TEXT",
+    "diag_text": "TEXT",
+    "diag_status": "VARCHAR(16) DEFAULT 'none' NOT NULL",
+    "diag_shown": "INTEGER DEFAULT 0 NOT NULL",
+    "diag_awaiting_reveal": "INTEGER DEFAULT 0 NOT NULL",
+    "last_bot_message_id": "INTEGER",
 }
 
 PAYMENT_COLUMNS = {
     "source": "VARCHAR(32) DEFAULT 'telegram'",
+    "product_code": "VARCHAR(32) DEFAULT 'program' NOT NULL",
     "invite_sent_at": "DATETIME",
     "paid_at": "DATETIME",
     "canceled_at": "DATETIME",
@@ -123,6 +133,8 @@ def _migrate_schema(sync_conn) -> None:
     _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)
     _add_missing_columns(sync_conn, "payments", PAYMENT_COLUMNS)
     _migrate_clients_email_nullable(sync_conn)
+    # После recreate email-таблицы колонки могли пропасть — добираем снова.
+    _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)
 
 
 async def init_db() -> None:

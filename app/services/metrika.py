@@ -10,11 +10,9 @@ from app.config import Settings
 logger = logging.getLogger(__name__)
 
 GOAL_VALUES = {
-    "view_offer": 100,
-    "click_to_telegram": 500,
-    "bot_started": 2000,
-    "diagnostic_started": 3000,
-    "diagnostic_finished": 8000,
+    "view_offer": 50,
+    "bot_started": 150,
+    "show_phone": 1000,
     "payment_started": 15000,
     "payment_success": 50000,
     "payment_canceled": 0,
@@ -103,6 +101,8 @@ async def track_purchase(
     cid: str,
     order_id: str,
     amount: float | str = 50000,
+    product_id: str = "vs-program",
+    product_name: str | None = None,
 ) -> None:
     body: dict[str, Any] = {
         "cid": cid,
@@ -111,8 +111,8 @@ async def track_purchase(
         "ti": order_id,
         "tr": str(amount),
         "cu": "RUB",
-        "pr1id": "vs-program",
-        "pr1nm": settings.product_title,
+        "pr1id": product_id,
+        "pr1nm": product_name or settings.product_title,
         "pr1pr": str(amount),
         "pr1qt": "1",
         "dl": f"https://t.me/{settings.telegram_bot_username}/paid",
@@ -120,7 +120,14 @@ async def track_purchase(
     await send_collect(settings, body)
 
 
-async def track_add_to_cart(settings: Settings, *, cid: str, amount: float | str = 50000) -> None:
+async def track_add_to_cart(
+    settings: Settings,
+    *,
+    cid: str,
+    amount: float | str = 50000,
+    product_id: str = "vs-program",
+    product_name: str | None = None,
+) -> None:
     await send_collect(
         settings,
         {
@@ -128,8 +135,8 @@ async def track_add_to_cart(settings: Settings, *, cid: str, amount: float | str
             "t": "event",
             "pa": "add",
             "cu": "RUB",
-            "pr1id": "vs-program",
-            "pr1nm": settings.product_title,
+            "pr1id": product_id,
+            "pr1nm": product_name or settings.product_title,
             "pr1pr": str(amount),
             "pr1qt": "1",
             "dl": f"https://t.me/{settings.telegram_bot_username}/pay",

@@ -9,6 +9,8 @@ from app.config import Settings
 
 TELEGRAM_API = "https://api.telegram.org"
 
+_shared: "TelegramClient | None" = None
+
 
 class TelegramError(RuntimeError):
     def __init__(self, message: str, payload: Any = None):
@@ -24,12 +26,16 @@ class TelegramClient:
 
     async def __aenter__(self) -> TelegramClient:
         if self._client is None:
-            self._client = httpx.AsyncClient(timeout=30.0)
+            self._client = httpx.AsyncClient(
+                timeout=httpx.Timeout(20.0, connect=5.0),
+                limits=httpx.Limits(max_connections=20, max_keepalive_connections=10),
+            )
         return self
 
     async def __aexit__(self, *args: object) -> None:
         if self._owns_client and self._client is not None:
             await self._client.aclose()
+            self._client = None
 
     @property
     def client(self) -> httpx.AsyncClient:
@@ -51,6 +57,9 @@ class TelegramClient:
 
     async def get_me(self) -> dict[str, Any]:
         return await self.call("getMe")
+
+    async def get_chat(self, chat_id: int | str) -> dict[str, Any]:
+        return await self.call("getChat", chat_id=chat_id)
 
     async def create_invite_link(
         self,
@@ -120,13 +129,29 @@ class TelegramClient:
             body["text"] = text
         return await self.call("answerCallbackQuery", **body)
 
+    async def delete_message(self, chat_id: int | str, message_id: int) -> dict[str, Any]:
+        return await self.call("deleteMessage", chat_id=chat_id, message_id=message_id)
+
+    async def edit_reply_markup(
+        self,
+        chat_id: int | str,
+        message_id: int,
+        reply_markup: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        payload: dict[str, Any] = {"chat_id": chat_id, "message_id": message_id}
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
+        else:
+            payload["reply_markup"] = {"inline_keyboard": []}
+        return await self.call("editMessageReplyMarkup", **payload)
+
     async def set_webhook(self, url: str, secret_token: str) -> dict[str, Any]:
         return await self.call(
             "setWebhook",
             url=url,
             secret_token=secret_token,
             drop_pending_updates=False,
-            allowed_updates=["message", "callback_query", "my_chat_member"],
+            allowed_updates=["message", "callback_query", "my_chat_member", "channel_post"],
         )
 
     async def delete_webhook(self) -> dict[str, Any]:
@@ -135,7 +160,7 @@ class TelegramClient:
     async def get_updates(self, offset: int | None = None, timeout: int = 25) -> list[dict[str, Any]]:
         payload: dict[str, Any] = {
             "timeout": timeout,
-            "allowed_updates": ["message", "callback_query", "my_chat_member"],
+            "allowed_updates": ["message", "callback_query", "my_chat_member", "channel_post"],
         }
         if offset is not None:
             payload["offset"] = offset
@@ -144,3 +169,21 @@ class TelegramClient:
         if not data.get("ok"):
             raise TelegramError(f"getUpdates: {data}", payload=data)
         return data["result"]
+
+
+async def shared_tg(settings: Settings) -> TelegramClient:
+    """Один keep-alive HTTP-клиент на процесс — без TLS handshake на каждое сообщение."""
+    global _shared
+    if _shared is None or _shared._client is None:
+        _shared = TelegramClient(settings)
+        await _shared.__aenter__()
+    else:
+        _shared.settings = settings
+    return _shared
+
+
+async def close_shared_tg() -> None:
+    global _shared
+    if _shared is not None:
+        await _shared.__aexit__(None, None, None)
+        _shared = None
