@@ -22,11 +22,11 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
 
     product_price_kopecks: int = 5_000_000
-    product_title: str = "Программа «Верни себе себя»"
+    product_title: str = "Общая Трансформация · 14 дней"
     vip_diag_price_kopecks: int = 1_000_000
-    vip_diag_title: str = "VIP · диагностический созвон, 1 час"
+    vip_diag_title: str = "Персональная Трансформация · диагностический созвон, 60 мин"
     vip_train_price_kopecks: int = 19_000_000
-    vip_train_title: str = "VIP · персональное обучение, 2 недели"
+    vip_train_title: str = "Персональная Трансформация · 14 дней"
 
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"
 
@@ -71,9 +71,10 @@ class Settings(BaseSettings):
     def site_path(self) -> Path:
         if self.site_dir:
             return Path(self.site_dir)
-        sibling = REPO_ROOT / "site"
-        if sibling.exists():
-            return sibling
+        for name in ("website", "site"):
+            sibling = REPO_ROOT / name
+            if sibling.exists():
+                return sibling
         return ROOT_DIR / "static"
 
     @property
