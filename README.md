@@ -54,4 +54,4 @@ SQLite на free Render сбрасывается при редеплое — д�
 
 Даты набора и старта задаются переменными `ENROLLMENT_DEADLINE` и `COURSE_START_DATE`.
 
-Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл заголовков на сайте: `headline_1`…`headline_12`.
+Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл секций: `headline_*` / `section_*`. Дашборд поведения (открытый): https://million-zcqy.onrender.com/admin/behavior · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM для 9 объявлений — в `website/README.md`.

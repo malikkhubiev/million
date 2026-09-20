@@ -19,6 +19,7 @@ async def create_intent(
     landing_url: str | None,
     referrer: str | None,
     user_agent: str | None,
+    behavior_session_id: str | None = None,
 ) -> TrackingSession:
     token = secrets.token_hex(4)
     row = TrackingSession(
@@ -29,6 +30,7 @@ async def create_intent(
         landing_url=landing_url,
         referrer=referrer,
         user_agent=user_agent,
+        behavior_session_id=(behavior_session_id or None),
     )
     session.add(row)
     await session.commit()

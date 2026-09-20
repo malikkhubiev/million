@@ -41,6 +41,10 @@ PAYMENT_COLUMNS = {
     "raw_last_event": "TEXT",
 }
 
+TRACKING_COLUMNS = {
+    "behavior_session_id": "VARCHAR(64)",
+}
+
 
 def _add_missing_columns(sync_conn, table: str, columns: dict[str, str]) -> None:
     insp = inspect(sync_conn)
@@ -132,6 +136,7 @@ def _migrate_clients_email_nullable(sync_conn) -> None:
 def _migrate_schema(sync_conn) -> None:
     _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)
     _add_missing_columns(sync_conn, "payments", PAYMENT_COLUMNS)
+    _add_missing_columns(sync_conn, "tracking_sessions", TRACKING_COLUMNS)
     _migrate_clients_email_nullable(sync_conn)
     # После recreate email-таблицы колонки могли пропасть — добираем снова.
     _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)

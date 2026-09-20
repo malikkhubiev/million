@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     cors_origins: str = "*"
 
     product_price_kopecks: int = 5_000_000
-    product_title: str = "Общая Трансформация · 14 дней"
+    product_title: str = "Групповая Трансформация · 14 дней"
     vip_diag_price_kopecks: int = 1_000_000
     vip_diag_title: str = "Персональная Трансформация · диагностический созвон, 60 мин"
     vip_train_price_kopecks: int = 19_000_000

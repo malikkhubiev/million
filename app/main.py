@@ -7,7 +7,7 @@ from pathlib import Path
 
 from fastapi import BackgroundTasks, Depends, FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, ORJSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, ORJSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.config import Settings, get_settings
 from app.db import SessionLocal, get_session, init_db
+from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
@@ -104,6 +105,7 @@ async def health(settings: Settings = Depends(get_settings)):
 
 class IntentIn(BaseModel):
     metrika_client_id: str | None = None
+    session_id: str | None = None
     yclid: str | None = None
     utm_source: str | None = None
     utm_medium: str | None = None
@@ -112,6 +114,31 @@ class IntentIn(BaseModel):
     utm_term: str | None = None
     landing_url: str | None = None
     referrer: str | None = None
+
+
+class BehaviorSectionIn(BaseModel):
+    key: str
+    label: str | None = None
+    reached: int = 0
+    time_to_ms: int | None = None
+    dwell_ms: int = 0
+
+
+class BehaviorIn(BaseModel):
+    session_id: str
+    metrika_client_id: str | None = None
+    clicked_telegram: int = 0
+    bot_started: int = 0
+    page_ms: int | None = None
+    landing_url: str | None = None
+    referrer: str | None = None
+    yclid: str | None = None
+    utm_source: str | None = None
+    utm_medium: str | None = None
+    utm_campaign: str | None = None
+    utm_content: str | None = None
+    utm_term: str | None = None
+    sections: list[BehaviorSectionIn] = []
 
 
 @app.post("/api/intent")
@@ -141,13 +168,172 @@ async def create_tracking_intent(
         landing_url=body.landing_url,
         referrer=body.referrer,
         user_agent=request.headers.get("user-agent"),
+        behavior_session_id=(body.session_id or "")[:64] or None,
     )
+    if body.session_id:
+        await upsert_behavior(
+            session,
+            session_id=body.session_id[:64],
+            metrika_client_id=cid,
+            clicked_telegram=1,
+            bot_started=0,
+            page_ms=None,
+            landing_url=body.landing_url,
+            referrer=body.referrer,
+            user_agent=request.headers.get("user-agent"),
+            yclid=(body.yclid or "")[:64] or None,
+            utm=utm,
+            sections=[],
+        )
     start = f"t{row.token}"
     return {
         "token": row.token,
         "start": start,
         "bot_url": f"{settings.bot_link}?start={start}",
     }
+
+
+@app.post("/api/behavior")
+async def save_behavior(
+    body: BehaviorIn,
+    request: Request,
+    session: AsyncSession = Depends(get_session),
+):
+    sid = (body.session_id or "").strip()[:64]
+    if not sid:
+        raise HTTPException(400, "session_id required")
+    utm = {
+        k: v
+        for k, v in {
+            "utm_source": body.utm_source,
+            "utm_medium": body.utm_medium,
+            "utm_campaign": body.utm_campaign,
+            "utm_content": body.utm_content,
+            "utm_term": body.utm_term,
+        }.items()
+        if v
+    }
+    visit = await upsert_behavior(
+        session,
+        session_id=sid,
+        metrika_client_id=body.metrika_client_id,
+        clicked_telegram=1 if body.clicked_telegram else 0,
+        bot_started=1 if body.bot_started else 0,
+        page_ms=body.page_ms,
+        landing_url=body.landing_url,
+        referrer=body.referrer,
+        user_agent=request.headers.get("user-agent"),
+        yclid=(body.yclid or "")[:64] or None,
+        utm=utm,
+        sections=[s.model_dump() for s in body.sections],
+    )
+    return {"ok": True, "session_id": visit.session_id}
+
+
+@app.get("/api/behavior/stats")
+async def behavior_stats(
+    session: AsyncSession = Depends(get_session),
+    date_from: str | None = None,
+    date_to: str | None = None,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    utm_content: str | None = None,
+    utm_term: str | None = None,
+    bot_started: str | None = None,
+    clicked_telegram: str | None = None,
+    reached_section: str | None = None,
+    has_yclid: str | None = None,
+    q: str | None = None,
+    group_by: str = "utm_content",
+    sort: str = "created_at",
+    order: str = "desc",
+    include_visits: bool = True,
+    limit: int = 500,
+):
+    return await behavior_report(
+        session,
+        date_from=date_from,
+        date_to=date_to,
+        utm_source=utm_source,
+        utm_medium=utm_medium,
+        utm_campaign=utm_campaign,
+        utm_content=utm_content,
+        utm_term=utm_term,
+        bot_started=bot_started,
+        clicked_telegram=clicked_telegram,
+        reached_section=reached_section,
+        has_yclid=has_yclid,
+        q=q,
+        group_by=group_by,  # type: ignore[arg-type]
+        sort=sort,
+        order=order,
+        include_visits=include_visits,
+        limit=limit,
+    )
+
+
+@app.get("/api/behavior/export.txt")
+async def behavior_export_txt(
+    session: AsyncSession = Depends(get_session),
+    date_from: str | None = None,
+    date_to: str | None = None,
+    utm_source: str | None = None,
+    utm_medium: str | None = None,
+    utm_campaign: str | None = None,
+    utm_content: str | None = None,
+    utm_term: str | None = None,
+    bot_started: str | None = None,
+    clicked_telegram: str | None = None,
+    reached_section: str | None = None,
+    has_yclid: str | None = None,
+    q: str | None = None,
+    group_by: str = "utm_content",
+    sort: str = "created_at",
+    order: str = "desc",
+    limit: int = 5000,
+):
+    report = await behavior_report(
+        session,
+        date_from=date_from,
+        date_to=date_to,
+        utm_source=utm_source,
+        utm_medium=utm_medium,
+        utm_campaign=utm_campaign,
+        utm_content=utm_content,
+        utm_term=utm_term,
+        bot_started=bot_started,
+        clicked_telegram=clicked_telegram,
+        reached_section=reached_section,
+        has_yclid=has_yclid,
+        q=q,
+        group_by=group_by,  # type: ignore[arg-type]
+        sort=sort,
+        order=order,
+        include_visits=True,
+        limit=limit,
+    )
+    text = export_txt(report)
+    filename = f"behavior_{_utcnow_stamp()}.txt"
+    return PlainTextResponse(
+        text,
+        media_type="text/plain; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+def _utcnow_stamp() -> str:
+    from datetime import datetime, timezone
+
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
+
+
+@app.get("/admin/behavior")
+async def behavior_admin_page():
+    path = Path(__file__).resolve().parent.parent / "static" / "behavior.html"
+    if not path.exists():
+        raise HTTPException(404, "behavior.html not found")
+    return FileResponse(path)
 
 
 @app.get("/api/orders/{order_id}")

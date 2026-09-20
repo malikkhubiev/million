@@ -109,9 +109,56 @@ class TrackingSession(Base):
     landing_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     referrer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     user_agent: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    behavior_session_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
     consumed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class BehaviorVisit(Base):
+    """Один визит на лендинг: скролл, время на секциях, UTM, переход в Telegram."""
+
+    __tablename__ = "behavior_visits"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    session_id: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    metrika_client_id: Mapped[Optional[str]] = mapped_column(String(32), nullable=True, index=True)
+    telegram_user_id: Mapped[Optional[int]] = mapped_column(Integer, nullable=True, index=True)
+    yclid: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    utm_source: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    utm_medium: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    utm_campaign: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    utm_content: Mapped[Optional[str]] = mapped_column(String(128), nullable=True, index=True)
+    utm_term: Mapped[Optional[str]] = mapped_column(String(256), nullable=True)
+    landing_url: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    referrer: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    page_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    clicked_telegram: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    bot_started: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
+    )
+
+    sections: Mapped[list["BehaviorSection"]] = relationship(
+        back_populates="visit", cascade="all, delete-orphan"
+    )
+
+
+class BehaviorSection(Base):
+    __tablename__ = "behavior_sections"
+    __table_args__ = (UniqueConstraint("visit_id", "key", name="uq_behavior_visit_key"),)
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    visit_id: Mapped[int] = mapped_column(ForeignKey("behavior_visits.id"), nullable=False, index=True)
+    key: Mapped[str] = mapped_column(String(64), nullable=False)
+    label: Mapped[Optional[str]] = mapped_column(String(200), nullable=True)
+    reached: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    time_to_ms: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    dwell_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+    visit: Mapped[BehaviorVisit] = relationship(back_populates="sections")
 
 
 class WebhookEvent(Base):
