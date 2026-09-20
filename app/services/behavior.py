@@ -101,7 +101,8 @@ async def upsert_behavior(
     yclid: str | None,
     utm: dict[str, str],
     sections: list[dict[str, Any]],
-) -> BehaviorVisit:
+) -> tuple[BehaviorVisit, list[str]]:
+    """Возвращает (visit, ключи секций, до которых дошли впервые в этом апдейте)."""
     result = await session.execute(
         select(BehaviorVisit)
         .where(BehaviorVisit.session_id == session_id)
@@ -137,6 +138,7 @@ async def upsert_behavior(
     visit.updated_at = _utcnow()
 
     by_key = {row.key: row for row in visit.sections}
+    newly_reached: list[str] = []
     for item in sections:
         key = str(item.get("key") or "").strip()[:64]
         if not key:
@@ -152,8 +154,11 @@ async def upsert_behavior(
         if label:
             row.label = label
         reached = 1 if int(item.get("reached") or 0) else 0
+        was_reached = bool(row.reached)
         if reached:
             row.reached = 1
+            if not was_reached:
+                newly_reached.append(key)
         tt = item.get("time_to_ms")
         if tt is not None and row.time_to_ms is None:
             row.time_to_ms = max(0, int(tt))
@@ -161,9 +166,13 @@ async def upsert_behavior(
         if dwell is not None:
             row.dwell_ms = max(row.dwell_ms or 0, max(0, int(dwell)))
 
+    # Стабильный порядок воронки
+    order_idx = {k: i for i, k in enumerate(SECTION_ORDER)}
+    newly_reached.sort(key=lambda k: order_idx.get(k, 999))
+
     await session.commit()
     await session.refresh(visit)
-    return visit
+    return visit, newly_reached
 
 
 async def mark_bot_started(

@@ -287,6 +287,13 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
 
 async def _track_payment_success(settings: Settings, payment: Payment) -> None:
     client = payment.client
+    from app.services.activity_log import log_payment_success
+
+    log_payment_success(
+        telegram_user_id=client.telegram_user_id if client else None,
+        order_id=payment.order_id,
+        amount=payment.amount_value,
+    )
     cid = metrika_cid_for(client.metrika_client_id if client else None, client.telegram_user_id if client else None)
     if not cid:
         return
@@ -335,7 +342,7 @@ async def deliver_vip(session: AsyncSession, settings: Settings, payment: Paymen
             "На диагностике разберём твоё текущее состояние, что мешает жить так, "
             "как ты хочешь, и к каким изменениям тебе нужно прийти.\n\n"
             "Если личный формат тебе подойдёт и ты будешь готова продолжить — "
-            "следующий шаг 190 000 ₽. Возврат оплаты не производится, условия в оферте."
+            "следующий шаг 190 000 ₽. Условия оказания услуги и возврата — в оферте."
         )
         if client.phone and client.telegram_user_id:
             try:

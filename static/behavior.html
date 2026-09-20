@@ -5,37 +5,74 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Поведение на лендинге</title>
 <style>
-:root{--bg:#f4eee6;--ink:#161411;--muted:#6a635a;--line:rgba(22,20,17,.12);--good:#2f6b3a;--card:#fffdf8}
+:root{
+  --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
+  --card:#fffcf7;--good:#2a6b45;--warn:#9a5b20;--accent:#1f4d6e;--bar:#1f4d6e;--bar2:#2a6b45
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Georgia,serif;background:var(--bg);color:var(--ink);padding:24px 16px 80px}
-h1{font-size:clamp(28px,5vw,42px);font-weight:500;margin-bottom:6px}
-.lead{color:var(--muted);margin-bottom:20px;max-width:820px;line-height:1.5}
-.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px;background:var(--card);border:1px solid var(--line);padding:14px}
-.filters label{display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.filters input,.filters select{font:inherit;padding:8px 10px;border:1px solid var(--line);background:#fff;color:var(--ink);text-transform:none;letter-spacing:0;font-size:14px}
-.actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:22px}
-button,.btn{font:inherit;padding:10px 16px;border:1px solid #161411;background:#161411;color:#f7f1e8;cursor:pointer;text-decoration:none;display:inline-block}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:
+  radial-gradient(900px 400px at 10% -10%,rgba(31,77,110,.08),transparent),
+  radial-gradient(700px 360px at 100% 0%,rgba(42,107,69,.07),transparent),
+  var(--bg);color:var(--ink);padding:20px 14px 72px}
+h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
+.lead{color:var(--muted);margin-bottom:16px;max-width:880px;line-height:1.45;font-size:14px}
+.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(42,107,69,.5);animation:pulse 1.8s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(42,107,69,.45)}70%{box-shadow:0 0 0 10px rgba(42,107,69,0)}100%{box-shadow:0 0 0 0 rgba(42,107,69,0)}}
+.filters{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px;margin-bottom:12px;background:var(--card);border:1px solid var(--line);padding:12px;border-radius:10px}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.filters input,.filters select{font:inherit;padding:7px 9px;border:1px solid var(--line);background:#fff;color:var(--ink);text-transform:none;letter-spacing:0;font-size:13px;border-radius:6px}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center}
+button,.btn{font:inherit;padding:9px 14px;border:1px solid #1a1714;background:#1a1714;color:#f7f1e8;cursor:pointer;text-decoration:none;display:inline-block;border-radius:8px;font-size:13px}
 button.secondary,.btn.secondary{background:transparent;color:var(--ink)}
-.err{color:#8a3a2a;margin-bottom:14px}
-.grid{display:grid;gap:16px}
-.card{background:var(--card);border:1px solid var(--line);padding:16px}
-.card h2{font-size:20px;font-weight:500;margin-bottom:8px}
-.meta{color:var(--muted);font-size:13px;margin-bottom:12px;line-height:1.45}
-.pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);font-size:12px;margin:0 6px 6px 0}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{border-bottom:1px solid var(--line);padding:7px 6px;text-align:left;vertical-align:top}
-th{font-weight:600;color:var(--muted);font-size:11px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;user-select:none}
+.err{color:#8a3a2a;margin-bottom:12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:14px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 14px 12px}
+.kpi .v{font-size:28px;font-weight:700;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:12px;color:var(--muted);margin-top:2px}
+.kpi .s{font-size:12px;margin-top:6px;color:var(--accent)}
+.grid{display:grid;gap:12px}
+.charts{display:grid;grid-template-columns:1.4fr 1fr;gap:12px}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);padding:14px;border-radius:10px}
+.card h2{font-size:16px;font-weight:650;margin-bottom:8px}
+.meta{color:var(--muted);font-size:12px;margin-bottom:10px;line-height:1.45}
+.pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;margin:0 6px 6px 0;background:#fff}
+.funnel{display:flex;flex-direction:column;gap:6px}
+.frow{display:grid;grid-template-columns:minmax(110px,28%) 1fr auto;gap:8px;align-items:center}
+.flabel{font-size:12px;line-height:1.25}
+.flabel small{display:block;color:var(--muted);font-size:10px}
+.ftrack{height:18px;background:rgba(26,23,20,.06);border-radius:6px;overflow:hidden}
+.fbar{height:100%;background:linear-gradient(90deg,var(--bar),#3a7a9e);border-radius:6px;min-width:0;transition:width .35s ease}
+.fval{font-size:12px;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--muted)}
+.bars{display:flex;flex-direction:column;gap:10px}
+.bitem .btop{display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px}
+.btrack{height:10px;background:rgba(26,23,20,.06);border-radius:999px;overflow:hidden}
+.bfill{height:100%;border-radius:999px;background:var(--bar2)}
+.bfill.warn{background:var(--warn)}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th,td{border-bottom:1px solid var(--line);padding:7px 5px;text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--muted);font-size:10px;letter-spacing:.05em;text-transform:uppercase;cursor:pointer;user-select:none}
 th:hover{color:var(--ink)}
 .num{font-variant-numeric:tabular-nums;white-space:nowrap}
 .good{color:var(--good)}
-.visits details{margin-top:8px}
+.visits details{margin-top:4px}
 .visits summary{cursor:pointer}
-pre{white-space:pre-wrap;font-size:12px;line-height:1.4;background:#f7f1e8;padding:10px;border:1px solid var(--line)}
+pre{white-space:pre-wrap;font-size:11px;line-height:1.4;background:#f4eee6;padding:8px;border:1px solid var(--line);border-radius:6px;max-height:280px;overflow:auto}
+.sec-reach{display:inline-flex;gap:3px;flex-wrap:wrap}
+.dot-s{width:8px;height:8px;border-radius:2px;background:rgba(26,23,20,.12)}
+.dot-s.on{background:var(--good)}
 </style>
 </head>
 <body>
-  <h1>Поведение на лендинге</h1>
-  <p class="lead">Фильтры, группировки, сортировки. По каждой секции: сколько дошли, time_to и dwell — avg / median / min / max. Полная выгрузка в .txt со всеми визитами и датами.</p>
+  <div class="topbar">
+    <div>
+      <h1>Поведение на лендинге</h1>
+      <p class="lead">Воронка секций, конверсии в Telegram / бот, объявления. Автообновление каждые 10 с.</p>
+    </div>
+    <div class="live"><span class="dot" aria-hidden="true"></span><span id="liveLabel">обновление…</span></div>
+  </div>
 
   <form id="filters" class="filters">
     <label>С даты<input type="date" name="date_from"></label>
@@ -70,33 +107,33 @@ pre{white-space:pre-wrap;font-size:12px;line-height:1.4;background:#f7f1e8;paddi
     <label>поиск<input type="search" name="q" placeholder="session / cid / term…"></label>
     <label>группировка
       <select name="group_by">
-        <option value="utm_content">utm_content</option>
-        <option value="utm_campaign">utm_campaign</option>
-        <option value="utm_source">utm_source</option>
-        <option value="utm_medium">utm_medium</option>
-        <option value="utm_term">utm_term</option>
+        <option value="utm_content">объявление</option>
+        <option value="utm_campaign">кампания</option>
+        <option value="utm_source">source</option>
+        <option value="utm_medium">medium</option>
+        <option value="utm_term">ключ</option>
         <option value="bot_started">bot_started</option>
         <option value="clicked_telegram">clicked_telegram</option>
         <option value="day">день</option>
         <option value="none">без групп</option>
       </select>
     </label>
-    <label>сортировка визитов
+    <label>сортировка
       <select name="sort">
-        <option value="created_at">created_at</option>
-        <option value="updated_at">updated_at</option>
-        <option value="page_ms">page_ms</option>
+        <option value="created_at">создан</option>
+        <option value="updated_at">обновлён</option>
+        <option value="page_ms">время на сайте</option>
         <option value="bot_started">bot_started</option>
-        <option value="clicked_telegram">clicked_telegram</option>
-        <option value="utm_content">utm_content</option>
-        <option value="utm_campaign">utm_campaign</option>
-        <option value="utm_term">utm_term</option>
+        <option value="clicked_telegram">click TG</option>
+        <option value="utm_content">объявление</option>
+        <option value="utm_campaign">кампания</option>
+        <option value="utm_term">ключ</option>
       </select>
     </label>
     <label>порядок
       <select name="order">
-        <option value="desc">desc</option>
-        <option value="asc">asc</option>
+        <option value="desc">новые сверху</option>
+        <option value="asc">старые сверху</option>
       </select>
     </label>
     <label>лимит визитов<input type="number" name="limit" value="500" min="1" max="5000"></label>
@@ -106,16 +143,25 @@ pre{white-space:pre-wrap;font-size:12px;line-height:1.4;background:#f7f1e8;paddi
     <button type="button" id="apply">Применить</button>
     <button type="button" class="secondary" id="reset">Сбросить</button>
     <a class="btn secondary" id="export" href="#">Скачать .txt</a>
+    <label style="font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;margin-left:4px">
+      <input type="checkbox" id="autorefresh" checked> авто 10 с
+    </label>
   </div>
   <div id="err" class="err" hidden></div>
+  <div id="kpis" class="kpis"></div>
+  <div id="charts" class="charts"></div>
   <div id="out" class="grid"></div>
 
 <script>
 const form = document.getElementById("filters");
 const errEl = document.getElementById("err");
 const outEl = document.getElementById("out");
+const kpisEl = document.getElementById("kpis");
+const chartsEl = document.getElementById("charts");
 const exportEl = document.getElementById("export");
+const liveLabel = document.getElementById("liveLabel");
 let sectionSort = {key: "order", dir: "asc"};
+let timer = null;
 
 function params(){
   const fd = new FormData(form);
@@ -150,8 +196,9 @@ function escapeAttr(s){ return escapeHtml(s); }
 
 function fmt(m){
   if (!m || !m.n) return "—";
-  return `avg ${m.avg} · med ${m.median} · min ${m.min} · max ${m.max} (n=${m.n})`;
+  return `avg ${m.avg} · med ${m.median} · min ${m.min} · max ${m.max}`;
 }
+function pct(x){ return Math.round((x || 0) * 100); }
 
 function sectionRows(sections){
   const order = ["top","one","feel","recognize","manifesto","method","author","results","inside","not_for","purchase"];
@@ -168,7 +215,7 @@ function sectionRows(sections){
   return rows.map(s => `
     <tr>
       <td>${escapeHtml(s.label)}<div class="meta">${escapeHtml(s.key)}</div></td>
-      <td class="num">${s.reached_count} <span class="meta">(${Math.round((s.reached_rate||0)*100)}%)</span></td>
+      <td class="num">${s.reached_count} <span class="meta">(${pct(s.reached_rate)}%)</span></td>
       <td class="num">${fmt(s.time_to_sec)}</td>
       <td class="num">${fmt(s.dwell_sec)}</td>
     </tr>`).join("");
@@ -179,11 +226,75 @@ function sectionTable(sections){
     <thead><tr>
       <th data-ssort="order">Секция</th>
       <th data-ssort="reach">Дошли</th>
-      <th data-ssort="tt">time_to (сек) avg/med/min/max</th>
-      <th data-ssort="dw">dwell (сек) avg/med/min/max</th>
+      <th data-ssort="tt">time_to, сек</th>
+      <th data-ssort="dw">dwell, сек</th>
     </tr></thead>
     <tbody>${sectionRows(sections)}</tbody>
   </table>`;
+}
+
+function renderKpis(data){
+  const t = data.totals || {};
+  const visits = t.visits || 0;
+  kpisEl.innerHTML = `
+    <div class="kpi"><div class="v">${visits}</div><div class="l">Визитов</div><div class="s">в БД ${data.visits_total_db}</div></div>
+    <div class="kpi"><div class="v">${pct(t.click_rate)}%</div><div class="l">Клик в Telegram</div><div class="s">${t.clicked_telegram || 0} чел.</div></div>
+    <div class="kpi"><div class="v good">${pct(t.bot_rate)}%</div><div class="l">Старт бота</div><div class="s">${t.bot_started || 0} чел.</div></div>
+    <div class="kpi"><div class="v">${t.page_sec?.avg != null ? t.page_sec.avg + " с" : "—"}</div><div class="l">Среднее время на сайте</div><div class="s">med ${t.page_sec?.median ?? "—"}</div></div>
+  `;
+}
+
+function funnelHtml(sections, visits){
+  const max = Math.max(visits || 1, ...(sections || []).map(s => s.reached_count || 0), 1);
+  return `<div class="funnel">${(sections || []).map(s => {
+    const w = Math.max(2, Math.round(((s.reached_count || 0) / max) * 100));
+    return `<div class="frow">
+      <div class="flabel">${escapeHtml(s.label)}<small>${escapeHtml(s.key)}</small></div>
+      <div class="ftrack"><div class="fbar" style="width:${w}%"></div></div>
+      <div class="fval">${s.reached_count} · ${pct(s.reached_rate)}%</div>
+    </div>`;
+  }).join("")}</div>`;
+}
+
+function compareBars(data){
+  const good = data.by_telegram?.bot_started || {};
+  const bad = data.by_telegram?.not_bot_started || {};
+  const items = [
+    {label: "Дошли до оплаты (purchase)", g: rate(good, "purchase"), b: rate(bad, "purchase")},
+    {label: "Клик Telegram", g: good.click_rate || 0, b: bad.click_rate || 0},
+    {label: "Визитов в группе", g: good.visits || 0, b: bad.visits || 0, raw: true}
+  ];
+  return `<div class="bars">${items.map(it => {
+    if (it.raw) {
+      const max = Math.max(it.g, it.b, 1);
+      return `<div class="bitem"><div class="btop"><span>${escapeHtml(it.label)}</span><span>хорошие ${it.g} / плохие ${it.b}</span></div>
+        <div class="btrack"><div class="bfill" style="width:${Math.round(it.g/max*100)}%"></div></div>
+        <div class="btrack" style="margin-top:4px"><div class="bfill warn" style="width:${Math.round(it.b/max*100)}%"></div></div></div>`;
+    }
+    return `<div class="bitem"><div class="btop"><span>${escapeHtml(it.label)}</span><span class="good">${pct(it.g)}%</span> / <span>${pct(it.b)}%</span></div>
+      <div class="btrack"><div class="bfill" style="width:${pct(it.g)}%"></div></div>
+      <div class="btrack" style="margin-top:4px"><div class="bfill warn" style="width:${pct(it.b)}%"></div></div></div>`;
+  }).join("")}</div>`;
+}
+
+function rate(block, key){
+  const s = (block.sections || []).find(x => x.key === key);
+  return s ? (s.reached_rate || 0) : 0;
+}
+
+function renderCharts(data){
+  const t = data.totals || {};
+  chartsEl.innerHTML = `
+    <section class="card">
+      <h2>Воронка секций</h2>
+      <p class="meta">Сколько визитов дошли до каждого блока лендинга</p>
+      ${funnelHtml(t.sections || [], t.visits || 0)}
+    </section>
+    <section class="card">
+      <h2>Хорошие vs плохие</h2>
+      <p class="meta">Зелёный — bot_started, янтарный — без /start</p>
+      ${compareBars(data)}
+    </section>`;
 }
 
 function block(title, data, extra=""){
@@ -192,8 +303,8 @@ function block(title, data, extra=""){
     <h2>${escapeHtml(title)}</h2>
     <div class="meta">
       <span class="pill">визитов ${data.visits}</span>
-      <span class="pill">клик TG ${data.clicked_telegram} (${Math.round((data.click_rate||0)*100)}%)</span>
-      <span class="pill good">bot_started ${data.bot_started} (${Math.round((data.bot_rate||0)*100)}%)</span>
+      <span class="pill">клик TG ${data.clicked_telegram} (${pct(data.click_rate)}%)</span>
+      <span class="pill good">bot ${data.bot_started} (${pct(data.bot_rate)}%)</span>
       <span class="pill">page: ${fmt(data.page_sec)}</span>
       ${extra}
     </div>
@@ -201,15 +312,25 @@ function block(title, data, extra=""){
   </section>`;
 }
 
+function reachDots(sections){
+  const order = ["top","one","feel","recognize","manifesto","method","author","results","inside","not_for","purchase"];
+  const map = Object.fromEntries((sections || []).map(s => [s.key, s]));
+  return `<div class="sec-reach" title="доскролл по секциям">${order.map(k => {
+    const on = map[k] && map[k].reached;
+    return `<span class="dot-s${on ? " on" : ""}" title="${escapeAttr((map[k]&&map[k].label)||k)}"></span>`;
+  }).join("")}</div>`;
+}
+
 function visitTable(visits){
   if (!visits?.length) return `<section class="card"><h2>Визиты</h2><p class="meta">Нет строк</p></section>`;
   const rows = visits.map(v => `
     <tr>
-      <td class="num">${escapeHtml(v.created_at || "")}</td>
+      <td class="num">${escapeHtml((v.created_at || "").replace("T"," ").slice(0,19))}</td>
       <td>${escapeHtml(v.utm_campaign || "—")}<div class="meta">${escapeHtml(v.utm_content || "")}</div></td>
       <td>${escapeHtml(v.utm_term || "—")}</td>
-      <td class="num">${v.clicked_telegram ? "да" : "нет"} / ${v.bot_started ? "да" : "нет"}</td>
+      <td class="num">${v.clicked_telegram ? "да" : "нет"} / ${v.bot_started ? '<span class="good">да</span>' : "нет"}</td>
       <td class="num">${v.page_sec ?? "—"}</td>
+      <td>${reachDots(v.sections)}</td>
       <td>
         <details class="visits">
           <summary>${escapeHtml(v.session_id)}</summary>
@@ -219,11 +340,11 @@ function visitTable(visits){
     </tr>`).join("");
   return `<section class="card">
     <h2>Визиты</h2>
-    <p class="meta">Клик по строке → полный JSON визита с датами и секциями</p>
+    <p class="meta">Зелёные точки — до какой секции доскроллил. Раскрой session для JSON.</p>
     <table>
       <thead><tr>
-        <th>created_at (UTC)</th><th>campaign / content</th><th>term</th>
-        <th>click / bot</th><th>page_sec</th><th>session</th>
+        <th>время UTC</th><th>кампания / объявление</th><th>ключ</th>
+        <th>TG / bot</th><th>сек</th><th>путь</th><th>session</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>
@@ -243,26 +364,27 @@ function bindSectionSort(){
 
 function render(data){
   window.__lastReport = data;
+  renderKpis(data);
+  renderCharts(data);
   const parts = [];
-  parts.push(`<section class="card"><h2>Сводка фильтров</h2>
+  parts.push(`<section class="card"><h2>Сводка</h2>
     <div class="meta">
       сгенерировано ${escapeHtml(data.generated_at || "")}<br>
-      в БД: ${data.visits_total_db} · после фильтров: ${data.visits_matched} · показано визитов: ${data.visits_returned}
+      фильтр: ${data.visits_matched} · показано: ${data.visits_returned}
     </div></section>`);
-  parts.push(block("Итого по фильтру", data.totals));
-  parts.push(block("Хорошие: bot_started", data.by_telegram?.bot_started));
-  parts.push(block("Плохие: не bot_started", data.by_telegram?.not_bot_started));
   (data.groups || []).forEach(g => {
-    parts.push(block(`Группа ${g.group_by}=${g.group}`, g));
+    parts.push(block(`Группа: ${g.group}`, g, `<span class="pill">${escapeHtml(g.group_by || "")}</span>`));
   });
   parts.push(visitTable(data.visits || []));
   outEl.innerHTML = parts.join("");
   bindSectionSort();
 }
 
-async function load(){
-  errEl.hidden = true;
-  outEl.innerHTML = "<p class='meta'>Загрузка…</p>";
+async function load(silent){
+  if (!silent) {
+    errEl.hidden = true;
+    if (!window.__lastReport) outEl.innerHTML = "<p class='meta'>Загрузка…</p>";
+  }
   const p = params();
   exportEl.href = "/api/behavior/export.txt?" + p.toString();
   try {
@@ -277,22 +399,36 @@ async function load(){
     fillSelect("utm_term", f.utm_term || []);
     fillSections(f.sections || []);
     render(data);
+    const now = new Date();
+    liveLabel.textContent = "обновлено " + now.toLocaleTimeString("ru-RU");
   } catch (e) {
-    outEl.innerHTML = "";
-    errEl.hidden = false;
-    errEl.textContent = String(e.message || e);
+    if (!silent) {
+      errEl.hidden = false;
+      errEl.textContent = String(e.message || e);
+    }
+    liveLabel.textContent = "ошибка обновления";
   }
 }
 
-document.getElementById("apply").addEventListener("click", load);
+function schedule(){
+  if (timer) clearInterval(timer);
+  timer = null;
+  if (document.getElementById("autorefresh").checked) {
+    timer = setInterval(() => load(true), 10000);
+  }
+}
+
+document.getElementById("apply").addEventListener("click", () => load(false));
 document.getElementById("reset").addEventListener("click", () => {
   form.reset();
   form.elements.namedItem("limit").value = "500";
   form.elements.namedItem("group_by").value = "utm_content";
-  load();
+  load(false);
 });
-form.addEventListener("submit", e => { e.preventDefault(); load(); });
-load();
+document.getElementById("autorefresh").addEventListener("change", schedule);
+form.addEventListener("submit", e => { e.preventDefault(); load(false); });
+load(false);
+schedule();
 </script>
 </body>
 </html>

@@ -112,6 +112,14 @@ async def health(settings: Settings = Depends(get_settings)):
     }
 
 
+class BehaviorSectionIn(BaseModel):
+    key: str
+    label: str | None = None
+    reached: int = 0
+    time_to_ms: int | None = None
+    dwell_ms: int = 0
+
+
 class IntentIn(BaseModel):
     metrika_client_id: str | None = None
     session_id: str | None = None
@@ -123,14 +131,8 @@ class IntentIn(BaseModel):
     utm_term: str | None = None
     landing_url: str | None = None
     referrer: str | None = None
-
-
-class BehaviorSectionIn(BaseModel):
-    key: str
-    label: str | None = None
-    reached: int = 0
-    time_to_ms: int | None = None
-    dwell_ms: int = 0
+    page_ms: int | None = None
+    sections: list[BehaviorSectionIn] = []
 
 
 class BehaviorIn(BaseModel):
@@ -157,6 +159,8 @@ async def create_tracking_intent(
     session: AsyncSession = Depends(get_session),
     settings: Settings = Depends(get_settings),
 ):
+    from app.services.activity_log import log_intent, log_landing_ping
+
     utm = {
         k: v
         for k, v in {
@@ -180,20 +184,31 @@ async def create_tracking_intent(
         behavior_session_id=(body.session_id or "")[:64] or None,
     )
     if body.session_id:
-        await upsert_behavior(
+        visit, newly = await upsert_behavior(
             session,
             session_id=body.session_id[:64],
             metrika_client_id=cid,
             clicked_telegram=1,
             bot_started=0,
-            page_ms=None,
+            page_ms=body.page_ms,
             landing_url=body.landing_url,
             referrer=body.referrer,
             user_agent=request.headers.get("user-agent"),
             yclid=(body.yclid or "")[:64] or None,
             utm=utm,
-            sections=[],
+            sections=[s.model_dump() for s in body.sections],
         )
+        reached_total = sum(1 for s in visit.sections if s.reached)
+        log_landing_ping(
+            session_id=body.session_id[:64],
+            metrika_client_id=cid,
+            utm=utm,
+            page_ms=body.page_ms,
+            newly_reached=newly,
+            clicked_telegram=True,
+            sections_reached_total=reached_total,
+        )
+    log_intent(session_id=body.session_id, utm=utm, token=row.token)
     start = f"t{row.token}"
     return {
         "token": row.token,
@@ -204,13 +219,23 @@ async def create_tracking_intent(
 
 @app.post("/api/behavior")
 async def save_behavior(
-    body: BehaviorIn,
     request: Request,
     session: AsyncSession = Depends(get_session),
 ):
+    from app.services.activity_log import log_landing_ping
+    import json as _json
+
+    sid_raw = ""
+    try:
+        data = _json.loads(await request.body())
+        body = BehaviorIn.model_validate(data)
+    except Exception as exc:
+        raise HTTPException(400, f"bad behavior payload: {exc}") from exc
+
     sid = (body.session_id or "").strip()[:64]
     if not sid:
         raise HTTPException(400, "session_id required")
+    sid_raw = sid
     utm = {
         k: v
         for k, v in {
@@ -222,7 +247,7 @@ async def save_behavior(
         }.items()
         if v
     }
-    visit = await upsert_behavior(
+    visit, newly = await upsert_behavior(
         session,
         session_id=sid,
         metrika_client_id=body.metrika_client_id,
@@ -236,7 +261,18 @@ async def save_behavior(
         utm=utm,
         sections=[s.model_dump() for s in body.sections],
     )
-    return {"ok": True, "session_id": visit.session_id}
+    reached_total = sum(1 for s in visit.sections if s.reached)
+    if newly or body.clicked_telegram:
+        log_landing_ping(
+            session_id=sid_raw,
+            metrika_client_id=body.metrika_client_id,
+            utm=utm,
+            page_ms=body.page_ms,
+            newly_reached=newly,
+            clicked_telegram=bool(body.clicked_telegram),
+            sections_reached_total=reached_total,
+        )
+    return {"ok": True, "session_id": visit.session_id, "newly_reached": newly}
 
 
 @app.get("/api/behavior/stats")
@@ -388,6 +424,14 @@ async def pay_click_redirect(
     cid = metrika_cid_for(
         client.metrika_client_id if client else None,
         client.telegram_user_id if client else None,
+    )
+    from app.services.activity_log import log_payment_started
+
+    log_payment_started(
+        telegram_user_id=client.telegram_user_id if client else None,
+        order_id=payment.order_id,
+        product_code=payment.product_code,
+        amount=payment.amount_value,
     )
     if cid:
         background.add_task(
