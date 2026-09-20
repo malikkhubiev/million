@@ -49,12 +49,13 @@ class Settings(BaseSettings):
     telegram_channel_id: str = ""
     telegram_invite_expire_days: int = 30
     telegram_invite_member_limit: int = 1
+    # polling — только локально. На Render / production всегда webhook.
     telegram_mode: str = "polling"
     telegram_webhook_secret: str = "change-me"
     telegram_webhook_path: str = "/api/telegram/webhook"
 
     site_dir: str = ""
-    site_url: str = ""
+    site_url: str = "https://life-energy-phi.vercel.app"
 
     enrollment_deadline: str = "20 сентября"
     course_start_date: str = "1 октября"
@@ -113,6 +114,16 @@ class Settings(BaseSettings):
         item["rubles"] = kopecks / 100
         item["amount_value"] = f"{kopecks / 100:.2f}"
         return item
+
+    @property
+    def effective_telegram_mode(self) -> str:
+        """На проде нельзя polling: два инстанса → Telegram 409 Conflict."""
+        mode = (self.telegram_mode or "polling").strip().lower()
+        base = (self.app_base_url or "").lower()
+        on_render = "onrender.com" in base or self.app_env == "production"
+        if on_render and mode == "polling":
+            return "webhook"
+        return mode
 
     @property
     def is_yookassa_configured(self) -> bool:

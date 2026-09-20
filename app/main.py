@@ -65,12 +65,20 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     (Path(__file__).resolve().parent.parent / "data").mkdir(exist_ok=True)
     await init_db()
-    if settings.telegram_mode == "polling" and settings.telegram_bot_token:
+    mode = settings.effective_telegram_mode
+    if mode != settings.telegram_mode:
+        logger.warning(
+            "TELEGRAM_MODE=%s игнорируется на проде → используем %s",
+            settings.telegram_mode,
+            mode,
+        )
+    if mode == "polling" and settings.telegram_bot_token:
         await polling_runner.start()
-    elif settings.telegram_mode == "webhook" and settings.telegram_bot_token:
+    elif mode == "webhook" and settings.telegram_bot_token:
         async with TelegramClient(settings) as tg:
             url = f"{settings.app_base_url.rstrip('/')}{settings.telegram_webhook_path}"
             try:
+                await tg.delete_webhook()
                 await tg.set_webhook(url, settings.telegram_webhook_secret)
                 logger.info("Telegram webhook: %s", url)
             except Exception:
@@ -97,7 +105,8 @@ async def health(settings: Settings = Depends(get_settings)):
         "env": settings.app_env,
         "yookassa": settings.is_yookassa_configured,
         "telegram": settings.is_telegram_configured,
-        "telegram_mode": settings.telegram_mode,
+        "telegram_mode": settings.effective_telegram_mode,
+        "telegram_mode_env": settings.telegram_mode,
         "metrika": settings.is_metrika_configured,
         "bot": settings.bot_link,
     }
@@ -467,11 +476,12 @@ if (SITE / "img").exists():
 
 
 @app.get("/")
-async def index():
+async def index(settings: Settings = Depends(get_settings)):
     path = SITE / "index.html"
-    if not path.exists():
-        raise HTTPException(404, "Сайт не найден")
-    return FileResponse(path)
+    if path.exists():
+        return FileResponse(path)
+    # Лендинг на Vercel — корень API не должен отдавать 404 в логах Render.
+    return RedirectResponse(settings.site_link, status_code=302)
 
 
 @app.get("/success.html")
