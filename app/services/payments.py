@@ -369,9 +369,9 @@ async def deliver_invite(
         logger.info("Нет telegram_user_id для автодоставки %s", payment.order_id)
         return
     text = (
-        "Оплата прошла. Ты внутри.\n\n"
-        f'<a href="{invite.invite_url}">Открыть закрытый канал</a>\n\n'
-        "Ссылка на одного человека. Сохрани её."
+        "👏 Сомнения позади и ты знаешь чего хочешь!\n\n"
+        f'<a href="{invite.invite_url}">Дверь открыта, проходи)</a>\n\n'
+        "Приглашение эксклюзивное, будь аккуратна 🙏"
     )
     try:
         from app.services.telegram import shared_tg
