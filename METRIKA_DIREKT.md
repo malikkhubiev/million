@@ -1,7 +1,7 @@
 # Что настроить в Яндекс.Метрике и Яндекс.Директе
 
 Сайт: https://life-energy-phi.vercel.app/  
-Бот / API / дашборд: https://million-zcqy.onrender.com/admin/behavior  
+Бот / API / дашборд: Railway (`APP_BASE_URL`, см. `bot-payment/RAILWAY.md`). Пока не сменил URL — старый Render: https://million-zcqy.onrender.com/admin/behavior  
 
 **Где смотреть поведение пользователей:** свой дашборд (avg / median / min / max, фильтры, группы, выгрузка `.txt`).  
 **Зачем Метрика и Директ:** цели для оптимизации рекламы, автопометка `yclid`, отчёты по UTM в интерфейсе Яндекса.
@@ -21,7 +21,7 @@
    - блок **Дополнительные настройки** → **Безопасность и использование данных**
    - включи переключатель **Measurement Protocol**
    - появится строка токена → **Скопировать** (или «Добавить токен»)
-4. В Render (сервис `million`) → Environment → добавь:
+4. В Railway → Variables сервиса добавь:
    - `METRIKA_MP_TOKEN` = этот токен  
    Без неё цели из бота (`bot_started`, `show_phone`, `payment_*`) не доедут.
 
@@ -131,7 +131,7 @@ utm_source=yandex&utm_medium=cpc&utm_campaign=CAMPAIGN&utm_content=AD&utm_term={
 
 ## 3. Свой дашборд (основной контроль)
 
-Открой: https://million-zcqy.onrender.com/admin/behavior
+Открой дашборд: `https://<твой-railway>/admin/behavior`
 
 Там можно:
 
@@ -143,10 +143,10 @@ utm_source=yandex&utm_medium=cpc&utm_campaign=CAMPAIGN&utm_content=AD&utm_term={
 - **Скачать .txt** — полный дамп с фильтрами, группами, всеми визитами, датами (`created_at` / `updated_at`) и секциями.
 
 Прямая выгрузка:  
-https://million-zcqy.onrender.com/api/behavior/export.txt  
+`https://<твой-railway>/api/behavior/export.txt`  
 
 JSON с теми же фильтрами:  
-https://million-zcqy.onrender.com/api/behavior/stats  
+`https://<твой-railway>/api/behavior/stats`  
 
 ---
 

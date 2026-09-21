@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     telegram_channel_id: str = ""
     telegram_invite_expire_days: int = 30
     telegram_invite_member_limit: int = 1
-    # polling — только локально. На Render / production всегда webhook.
+    # polling — только локально. На Railway / production всегда webhook.
     telegram_mode: str = "polling"
     telegram_webhook_secret: str = "change-me"
     telegram_webhook_path: str = "/api/telegram/webhook"
@@ -120,8 +120,13 @@ class Settings(BaseSettings):
         """На проде нельзя polling: два инстанса → Telegram 409 Conflict."""
         mode = (self.telegram_mode or "polling").strip().lower()
         base = (self.app_base_url or "").lower()
-        on_render = "onrender.com" in base or self.app_env == "production"
-        if on_render and mode == "polling":
+        on_cloud = (
+            self.app_env == "production"
+            or "onrender.com" in base
+            or "railway.app" in base
+            or "up.railway.app" in base
+        )
+        if on_cloud and mode == "polling":
             return "webhook"
         return mode
 

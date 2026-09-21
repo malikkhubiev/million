@@ -45,6 +45,17 @@ TRACKING_COLUMNS = {
     "behavior_session_id": "VARCHAR(64)",
 }
 
+BEHAVIOR_VISIT_COLUMNS = {
+    "clicked_telegram_ms": "INTEGER",
+    "bot_started_ms": "INTEGER",
+    "show_phone": "INTEGER DEFAULT 0 NOT NULL",
+    "show_phone_ms": "INTEGER",
+    "payment_started": "INTEGER DEFAULT 0 NOT NULL",
+    "payment_started_ms": "INTEGER",
+    "payment_success": "INTEGER DEFAULT 0 NOT NULL",
+    "payment_success_ms": "INTEGER",
+}
+
 
 def _add_missing_columns(sync_conn, table: str, columns: dict[str, str]) -> None:
     insp = inspect(sync_conn)
@@ -137,6 +148,7 @@ def _migrate_schema(sync_conn) -> None:
     _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)
     _add_missing_columns(sync_conn, "payments", PAYMENT_COLUMNS)
     _add_missing_columns(sync_conn, "tracking_sessions", TRACKING_COLUMNS)
+    _add_missing_columns(sync_conn, "behavior_visits", BEHAVIOR_VISIT_COLUMNS)
     _migrate_clients_email_nullable(sync_conn)
     # После recreate email-таблицы колонки могли пропасть — добираем снова.
     _add_missing_columns(sync_conn, "clients", CLIENT_COLUMNS)

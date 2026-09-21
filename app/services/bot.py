@@ -407,8 +407,16 @@ async def _handle_contact(
         if cid:
             asyncio.create_task(_track_phone(settings, cid, general_order))
         from app.services.activity_log import log_show_phone
+        from app.services.behavior import mark_behavior_stage
 
         log_show_phone(telegram_user_id=tg_id, order_id=general_order)
+        async with SessionLocal() as session:
+            await mark_behavior_stage(
+                session,
+                stage="show_phone",
+                telegram_user_id=tg_id,
+                metrika_client_id=cid,
+            )
 
         await _bot_message(
             settings,

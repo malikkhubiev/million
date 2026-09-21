@@ -35,23 +35,24 @@ button.secondary,.btn.secondary{background:transparent;color:var(--ink)}
 .kpi .s{font-size:12px;margin-top:6px;color:var(--accent)}
 .grid{display:grid;gap:12px}
 .charts{display:grid;gap:12px;margin-bottom:12px}
-.charts-top{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media(max-width:980px){.charts-top{grid-template-columns:1fr}}
+.charts-top{display:grid;grid-template-columns:1fr;gap:12px}
 .card{background:var(--card);border:1px solid var(--line);padding:14px;border-radius:10px}
 .card h2{font-size:16px;font-weight:650;margin-bottom:8px}
 .meta{color:var(--muted);font-size:12px;margin-bottom:10px;line-height:1.45}
 .pill{display:inline-block;padding:2px 8px;border:1px solid var(--line);border-radius:999px;font-size:11px;margin:0 6px 6px 0;background:#fff}
+.pill.bot{border-color:rgba(42,107,69,.35);background:rgba(42,107,69,.08);color:var(--good)}
 
 /* Classic trapezoid funnel */
-.vfunnel{display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0 8px}
+.vfunnel{display:flex;flex-direction:column;align-items:center;gap:0;padding:4px 0 8px;max-width:720px;margin:0 auto}
 .vstep{position:relative;width:100%;display:flex;flex-direction:column;align-items:center}
 .vtrap{
   position:relative;display:flex;align-items:center;justify-content:center;
-  color:#f7f1e8;text-align:center;padding:10px 16px;min-height:44px;
+  color:#f7f1e8;text-align:center;padding:10px 16px;min-height:52px;
   clip-path:polygon(var(--inl,0%) 0%, calc(100% - var(--inr,0%)) 0%, calc(100% - var(--outr,0%)) 100%, var(--outl,0%) 100%);
   background:linear-gradient(180deg,rgba(255,255,255,.14),transparent), var(--c,#1f4d6e);
   transition:filter .2s ease;
 }
+.vtrap.bot-stage{box-shadow:inset 0 0 0 1px rgba(255,255,255,.2)}
 .vtrap:hover{filter:brightness(1.06)}
 .vtrap .vt-main{font-size:13px;font-weight:650;line-height:1.2}
 .vtrap .vt-sub{font-size:11px;opacity:.88;margin-top:2px;font-variant-numeric:tabular-nums}
@@ -62,24 +63,30 @@ button.secondary,.btn.secondary{background:transparent;color:var(--ink)}
 .vdrop .arrow{color:var(--drop);font-weight:600}
 .vdrop .keep{color:var(--good)}
 
-/* Dual good/bad funnels — row-aligned */
+/* Dual / triple funnels — row-aligned */
 .dual{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px 16px;
   align-items:stretch;
 }
+.triple{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  gap:10px 12px;
+  align-items:stretch;
+}
 .dual-head{
   display:flex;flex-direction:column;gap:2px;padding:10px 12px;border-radius:10px;
   border:1px solid var(--line);background:#fff;
 }
+.dual-head.all{border-color:rgba(31,77,110,.35);background:rgba(31,77,110,.06)}
 .dual-head.bad{border-color:rgba(154,91,32,.35);background:rgba(154,91,32,.06)}
 .dual-head.good{border-color:rgba(42,107,69,.35);background:rgba(42,107,69,.07)}
 .dual-head .ht{font-size:14px;font-weight:650}
 .dual-head .hs{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .dual-row{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;
-  grid-column:1 / -1;align-items:stretch;
+  display:contents;
 }
 .dual-stage{
   display:flex;flex-direction:column;gap:6px;min-width:0;
@@ -87,12 +94,13 @@ button.secondary,.btn.secondary{background:transparent;color:var(--ink)}
 .dual-bar{
   position:relative;margin:0 auto;width:100%;
   display:flex;align-items:center;justify-content:center;
-  color:#f7f1e8;text-align:center;padding:12px 14px;min-height:52px;
+  color:#f7f1e8;text-align:center;padding:12px 10px;min-height:52px;
   clip-path:polygon(var(--inl,0%) 0%, calc(100% - var(--inr,0%)) 0%, calc(100% - var(--outr,0%)) 100%, var(--outl,0%) 100%);
   background:linear-gradient(180deg,rgba(255,255,255,.12),transparent), var(--c,#9a5b20);
 }
-.dual-bar .nm{font-size:13px;font-weight:650;line-height:1.2}
-.dual-bar .cnt{font-size:12px;opacity:.92;margin-top:2px;font-variant-numeric:tabular-nums}
+.dual-bar.bot-stage{outline:1px solid rgba(255,255,255,.25);outline-offset:-3px}
+.dual-bar .nm{font-size:12px;font-weight:650;line-height:1.2}
+.dual-bar .cnt{font-size:11px;opacity:.92;margin-top:2px;font-variant-numeric:tabular-nums}
 .dual-stats{
   display:grid;grid-template-columns:1fr 1fr;gap:4px 8px;
   font-size:11px;font-variant-numeric:tabular-nums;line-height:1.35;
@@ -102,21 +110,26 @@ button.secondary,.btn.secondary{background:transparent;color:var(--ink)}
 .dual-stats .v{color:var(--ink)}
 .dual-stats .full{grid-column:1 / -1}
 .dual-time{
-  font-size:11px;color:var(--muted);line-height:1.4;padding:6px 8px;
+  font-size:10px;color:var(--muted);line-height:1.4;padding:6px 8px;
   background:rgba(26,23,20,.04);border-radius:6px;font-variant-numeric:tabular-nums;
 }
 .dual-time strong{color:var(--ink);font-weight:600}
 .dual-bridge{
-  display:grid;grid-template-columns:1fr 1fr;gap:10px 16px;
-  grid-column:1 / -1;font-size:11px;color:var(--muted);
-  font-variant-numeric:tabular-nums;padding:0 2px 2px;
+  display:contents;
 }
-.dual-bridge span{display:block;text-align:center}
+.dual-bridge > span{
+  display:block;text-align:center;font-size:11px;color:var(--muted);
+  font-variant-numeric:tabular-nums;padding:0 2px 6px;
+}
 .dual-bridge .keep{color:var(--good)}
 .dual-bridge .lose{color:var(--drop)}
+@media(max-width:1100px){
+  .triple{grid-template-columns:1fr}
+  .triple .dual-head.bad{order:2}
+  .triple .dual-head.good{order:3}
+}
 @media(max-width:720px){
-  .dual,.dual-row,.dual-bridge{grid-template-columns:1fr}
-  .dual-head.good{order:2}
+  .dual{grid-template-columns:1fr}
 }
 
 /* Conversion cards */
@@ -153,7 +166,7 @@ pre{white-space:pre-wrap;font-size:11px;line-height:1.4;background:#f4eee6;paddi
   <div class="topbar">
     <div>
       <h1>Поведение на лендинге</h1>
-      <p class="lead">Воронка секций и конверсии. Фильтры применяются сразу. «Автообновление 10 с» — страница сама перезапрашивает данные каждые 10 секунд.</p>
+      <p class="lead">Три полные воронки: сайт → Telegram → бот → номер → оплата. Фильтры сразу. «Автообновление 10 с» — перезапрос данных каждые 10 секунд.</p>
     </div>
     <div class="live"><span class="dot" aria-hidden="true"></span><span id="liveLabel">обновление…</span></div>
   </div>
@@ -248,11 +261,6 @@ let timer = null;
 let debounceTimer = null;
 let loadSeq = 0;
 
-const FUNNEL_COLORS = [
-  "#1f4d6e","#245a7e","#29678e","#2e749e","#3480a8",
-  "#3a8cb0","#4097b5","#4a9eaa","#52a49c","#5aa88a","#5eab78"
-];
-
 function params(){
   const fd = new FormData(form);
   const p = new URLSearchParams();
@@ -335,63 +343,48 @@ function renderKpis(data){
   const visits = t.visits || 0;
   const clicked = t.clicked_telegram || 0;
   const bots = t.bot_started || 0;
+  const phone = t.show_phone || 0;
+  const payStart = t.payment_started || 0;
+  const payOk = t.payment_success || 0;
   kpisEl.innerHTML = `
     <div class="kpi"><div class="v">${visits}</div><div class="l">Визитов</div><div class="s">в БД ${data.visits_total_db}</div></div>
-    <div class="kpi"><div class="v">${pct(t.click_rate)}%</div><div class="l">Клик в Telegram</div><div class="s">${clicked} чел. · ${pctLabel(clicked, visits)} от визитов</div></div>
-    <div class="kpi"><div class="v good">${pct(t.bot_rate)}%</div><div class="l">Старт бота</div><div class="s">${bots} чел. · ${pctLabel(bots, clicked || 1)} от клика TG</div></div>
-    <div class="kpi"><div class="v">${t.page_sec?.avg != null ? t.page_sec.avg + " с" : "—"}</div><div class="l">Среднее время на сайте</div><div class="s">med ${t.page_sec?.median ?? "—"}</div></div>
+    <div class="kpi"><div class="v">${pct(t.click_rate)}%</div><div class="l">Клик Telegram</div><div class="s">${clicked} · ${pctLabel(clicked, visits)}</div></div>
+    <div class="kpi"><div class="v good">${pct(t.bot_rate)}%</div><div class="l">Старт бота</div><div class="s">${bots} · ${pctLabel(bots, clicked || 1)} от клика</div></div>
+    <div class="kpi"><div class="v">${pct1(phone, visits)}%</div><div class="l">Показать номер</div><div class="s">${phone} · ${pctLabel(phone, bots || 1)} от /start</div></div>
+    <div class="kpi"><div class="v">${pct1(payStart, visits)}%</div><div class="l">Клик «Оплатить»</div><div class="s">${payStart} · ${pctLabel(payStart, phone || 1)} от номера</div></div>
+    <div class="kpi"><div class="v good">${pct1(payOk, visits)}%</div><div class="l">Оплата успешна</div><div class="s">${payOk} · ${pctLabel(payOk, payStart || 1)} от клика оплаты</div></div>
   `;
 }
 
-function visualFunnel(sections, visits, pageSec){
-  const steps = [
-    {key: "_visits", label: "Визиты", count: visits || 0, time: pageSec || null},
-    ...(sections || []).map(s => ({
+const BOT_KEYS = new Set(["clicked_telegram","bot_started","show_phone","payment_started","payment_success"]);
+const ALL_COLORS = ["#1a1714","#1f4d6e","#245a7e","#29678e","#2e749e","#3480a8","#3a8cb0","#4097b5","#4a9eaa","#52a49c","#5aa88a","#5eab78","#2a6b45","#317850","#38855b","#409266","#1f4d3a"];
+const BAD_COLORS = ["#5c3d22","#6b4423","#7a4d28","#8a572e","#9a5b20","#a8672c","#b47338","#be7f44","#c68b50","#cc9660","#d2a070","#d8aa80","#9a5b20","#a8672c","#b47338","#be7f44","#c68b50"];
+const GOOD_COLORS = ["#1a3d2e","#1f4d3a","#246348","#2a6b45","#317850","#38855b","#409266","#489e70","#50a87a","#58b284","#60bc8e","#68c698","#2a6b45","#317850","#38855b","#409266","#489e70"];
+
+function funnelSteps(block){
+  if (block?.funnel?.length) {
+    return block.funnel.map(s => ({
       key: s.key,
       label: s.label,
+      kind: s.kind || (BOT_KEYS.has(s.key) ? "bot" : (s.key === "_visits" ? "root" : "section")),
       count: s.reached_count || 0,
+      ofTotal: s.reached_rate,
+      ofPrev: s.from_prev_rate,
       time: s.time_to_sec || null
+    }));
+  }
+  // fallback если API старый
+  return [
+    {key: "_visits", label: "Визиты", kind: "root", count: block?.visits || 0, time: block?.page_sec || null},
+    ...(block?.sections || []).map(s => ({
+      key: s.key, label: s.label, kind: "section",
+      count: s.reached_count || 0, time: s.time_to_sec || null
+    })),
+    ...(block?.bot_stages || []).map(s => ({
+      key: s.key, label: s.label, kind: "bot",
+      count: s.reached_count || 0, time: s.time_to_sec || null
     }))
   ];
-  const n = Math.max(steps.length - 1, 1);
-  const maxInset = 38;
-
-  let html = `<div class="vfunnel">`;
-  for (let i = 0; i < steps.length; i++) {
-    const s = steps[i];
-    const prev = i > 0 ? steps[i - 1] : null;
-    const inset = (i / n) * maxInset;
-    const nextInset = ((i + 1) / n) * maxInset;
-    const inl = inset / 2;
-    const inr = inset / 2;
-    const outl = i < steps.length - 1 ? nextInset / 2 : inset / 2 + 2;
-    const outr = i < steps.length - 1 ? nextInset / 2 : inset / 2 + 2;
-    const ofTotal = pctLabel(s.count, visits || 1);
-    const ofPrev = prev ? pctLabel(s.count, prev.count || 1) : "100%";
-    const color = i === 0 ? "#1a1714" : FUNNEL_COLORS[Math.min(i - 1, FUNNEL_COLORS.length - 1)];
-
-    html += `<div class="vstep">
-      <div class="vtrap" style="--inl:${inl}%;--inr:${inr}%;--outl:${outl}%;--outr:${outr}%;--c:${color};width:100%">
-        <div>
-          <div class="vt-main">${escapeHtml(s.label)}</div>
-          <div class="vt-sub">${s.count} · ${ofTotal} от всех · ${ofPrev} от пред.</div>
-          <div class="vt-sub">${fmtTimeShort(s.time)}</div>
-        </div>
-      </div>`;
-
-    if (i < steps.length - 1) {
-      const next = steps[i + 1];
-      const keep = pctLabel(next.count, s.count || 1);
-      const drop = s.count ? pct1(s.count - next.count, s.count) : 0;
-      html += `<div class="vdrop">
-        <span class="keep">→ ${keep} дальше</span>
-        <span class="arrow">↓ −${drop.toLocaleString("ru-RU", {maximumFractionDigits: 1})}% отсев</span>
-      </div>`;
-    }
-    html += `</div>`;
-  }
-  html += `</div>`;
-  return html;
 }
 
 function fmtTimeShort(m){
@@ -404,25 +397,7 @@ function fmtTimeBlock(m){
   return `<div class="dual-time"><strong>time (сек):</strong> min ${m.min} · max ${m.max} · avg ${m.avg} · median ${m.median}</div>`;
 }
 
-function buildSteps(block){
-  const visits = block.visits || 0;
-  return [
-    {
-      key: "_visits",
-      label: "Визиты",
-      count: visits,
-      time: block.page_sec || null
-    },
-    ...(block.sections || []).map(s => ({
-      key: s.key,
-      label: s.label,
-      count: s.reached_count || 0,
-      time: s.time_to_sec || null
-    }))
-  ];
-}
-
-function dualStageCell(step, prev, total, color, index, totalSteps){
+function stageCell(step, prev, total, color, index, totalSteps){
   const n = Math.max(totalSteps - 1, 1);
   const inset = (index / n) * 36;
   const nextInset = ((index + 1) / n) * 36;
@@ -430,13 +405,16 @@ function dualStageCell(step, prev, total, color, index, totalSteps){
   const inr = inset / 2;
   const outl = index < totalSteps - 1 ? nextInset / 2 : inset / 2 + 2;
   const outr = index < totalSteps - 1 ? nextInset / 2 : inset / 2 + 2;
-  const ofTotal = pctLabel(step.count, total || 1);
-  const ofPrev = prev ? pctLabel(step.count, prev.count || 1) : "100%";
+  const ofTotal = step.ofTotal != null ? pct(step.ofTotal) + "%" : pctLabel(step.count, total || 1);
+  const ofPrev = step.ofPrev != null
+    ? (Math.round((step.ofPrev || 0) * 1000) / 10).toLocaleString("ru-RU", {maximumFractionDigits: 1}) + "%"
+    : (prev ? pctLabel(step.count, prev.count || 1) : "100%");
+  const botCls = step.kind === "bot" ? " bot-stage" : "";
 
   return `<div class="dual-stage">
-    <div class="dual-bar" style="--inl:${inl}%;--inr:${inr}%;--outl:${outl}%;--outr:${outr}%;--c:${color}">
+    <div class="dual-bar${botCls}" style="--inl:${inl}%;--inr:${inr}%;--outl:${outl}%;--outr:${outr}%;--c:${color}">
       <div>
-        <div class="nm">${escapeHtml(step.label)}</div>
+        <div class="nm">${escapeHtml(step.label)}${step.kind === "bot" ? " · бот" : ""}</div>
         <div class="cnt">${step.count} чел.</div>
       </div>
     </div>
@@ -449,48 +427,50 @@ function dualStageCell(step, prev, total, color, index, totalSteps){
   </div>`;
 }
 
-function dualFunnelsHtml(data){
+function tripleFunnelsHtml(data){
+  const all = data.totals || {};
   const bad = data.by_telegram?.not_bot_started || {};
   const good = data.by_telegram?.bot_started || {};
-  const badSteps = buildSteps(bad);
-  const goodSteps = buildSteps(good);
-  const len = Math.max(badSteps.length, goodSteps.length);
-  const badColors = ["#6b4423","#7a4d28","#8a572e","#9a5b20","#a8672c","#b47338","#be7f44","#c68b50","#cc9660","#d2a070","#d8aa80"];
-  const goodColors = ["#1f4d3a","#246348","#2a6b45","#317850","#38855b","#409266","#489e70","#50a87a","#58b284","#60bc8e","#68c698"];
+  const allSteps = funnelSteps(all);
+  const badSteps = funnelSteps(bad);
+  const goodSteps = funnelSteps(good);
+  const len = Math.max(allSteps.length, badSteps.length, goodSteps.length);
 
-  let html = `<div class="dual">
+  let html = `<div class="triple">
+    <div class="dual-head all">
+      <div class="ht">Все · полная воронка</div>
+      <div class="hs">${all.visits || 0} визитов · bot ${all.bot_started || 0} · оплат ${all.payment_success || 0}</div>
+    </div>
     <div class="dual-head bad">
       <div class="ht">Плохие · без /start</div>
       <div class="hs">${bad.visits || 0} визитов · клик TG ${pct(bad.click_rate)}%</div>
     </div>
     <div class="dual-head good">
       <div class="ht">Хорошие · bot_started</div>
-      <div class="hs">${good.visits || 0} визитов · клик TG ${pct(good.click_rate)}%</div>
+      <div class="hs">${good.visits || 0} визитов · номер ${good.show_phone || 0} · оплат ${good.payment_success || 0}</div>
     </div>`;
 
   for (let i = 0; i < len; i++) {
+    const a = allSteps[i] || {key: "_", label: "—", count: 0, time: null};
     const b = badSteps[i] || {key: "_", label: "—", count: 0, time: null};
     const g = goodSteps[i] || {key: "_", label: "—", count: 0, time: null};
+    const aPrev = i > 0 ? allSteps[i - 1] : null;
     const bPrev = i > 0 ? badSteps[i - 1] : null;
     const gPrev = i > 0 ? goodSteps[i - 1] : null;
-    const bColor = i === 0 ? "#5c3d22" : badColors[Math.min(i - 1, badColors.length - 1)];
-    const gColor = i === 0 ? "#1a3d2e" : goodColors[Math.min(i - 1, goodColors.length - 1)];
 
-    html += `<div class="dual-row">
-      ${dualStageCell(b, bPrev, bad.visits || 0, bColor, i, len)}
-      ${dualStageCell(g, gPrev, good.visits || 0, gColor, i, len)}
-    </div>`;
+    html += `${stageCell(a, aPrev, all.visits || 0, ALL_COLORS[Math.min(i, ALL_COLORS.length - 1)], i, len)}
+      ${stageCell(b, bPrev, bad.visits || 0, BAD_COLORS[Math.min(i, BAD_COLORS.length - 1)], i, len)}
+      ${stageCell(g, gPrev, good.visits || 0, GOOD_COLORS[Math.min(i, GOOD_COLORS.length - 1)], i, len)}`;
 
     if (i < len - 1) {
+      const aNext = allSteps[i + 1] || {count: 0};
       const bNext = badSteps[i + 1] || {count: 0};
       const gNext = goodSteps[i + 1] || {count: 0};
-      const bKeep = pctLabel(bNext.count, b.count || 1);
-      const gKeep = pctLabel(gNext.count, g.count || 1);
-      const bDrop = b.count ? pct1(b.count - bNext.count, b.count) : 0;
-      const gDrop = g.count ? pct1(g.count - gNext.count, g.count) : 0;
+      const drop = (cur, next) => cur.count ? pct1(cur.count - next.count, cur.count) : 0;
       html += `<div class="dual-bridge">
-        <span><span class="keep">→ ${bKeep} дальше</span> · <span class="lose">−${bDrop.toLocaleString("ru-RU", {maximumFractionDigits: 1})}% отсев</span></span>
-        <span><span class="keep">→ ${gKeep} дальше</span> · <span class="lose">−${gDrop.toLocaleString("ru-RU", {maximumFractionDigits: 1})}% отсев</span></span>
+        <span><span class="keep">→ ${pctLabel(aNext.count, a.count || 1)}</span> · <span class="lose">−${drop(a, aNext).toLocaleString("ru-RU", {maximumFractionDigits: 1})}%</span></span>
+        <span><span class="keep">→ ${pctLabel(bNext.count, b.count || 1)}</span> · <span class="lose">−${drop(b, bNext).toLocaleString("ru-RU", {maximumFractionDigits: 1})}%</span></span>
+        <span><span class="keep">→ ${pctLabel(gNext.count, g.count || 1)}</span> · <span class="lose">−${drop(g, gNext).toLocaleString("ru-RU", {maximumFractionDigits: 1})}%</span></span>
       </div>`;
     }
   }
@@ -514,48 +494,32 @@ function conversionsHtml(data){
   const visits = t.visits || 0;
   const clicked = t.clicked_telegram || 0;
   const bots = t.bot_started || 0;
-  const purchase = (t.sections || []).find(s => s.key === "purchase");
-  const purchaseN = purchase?.reached_count || 0;
-  const mid = (t.sections || []).find(s => s.key === "method");
-  const midN = mid?.reached_count || 0;
-
-  const clickPct = pct1(clicked, visits);
-  const botPct = pct1(bots, visits);
-  const clickToBot = pct1(bots, clicked);
-  const purchasePct = pct1(purchaseN, visits);
-  const midPct = pct1(midN, visits);
-  const purchaseToClick = pct1(clicked, purchaseN);
+  const phone = t.show_phone || 0;
+  const payStart = t.payment_started || 0;
+  const payOk = t.payment_success || 0;
 
   return `<div class="conv-grid">
-    ${convCard("Визит → клик Telegram", clickPct, clicked, `из ${visits} визитов`, "mid")}
-    ${convCard("Визит → старт бота", botPct, bots, `из ${visits} визитов`)}
-    ${convCard("Клик TG → старт бота", clickToBot, bots, `из ${clicked} кликов`)}
-    ${convCard("Визит → секция оплаты", purchasePct, purchaseN, `из ${visits} визитов`, "warn")}
-    ${convCard("Визит → метод", midPct, midN, `из ${visits} визитов`, "mid")}
-    ${convCard("Оплата → клик TG", purchaseToClick, clicked, `из ${purchaseN} дошедших`, "warn")}
+    ${convCard("Визит → клик TG", pct1(clicked, visits), clicked, `из ${visits} визитов`, "mid")}
+    ${convCard("Клик TG → /start", pct1(bots, clicked), bots, `из ${clicked} кликов`)}
+    ${convCard("/start → номер", pct1(phone, bots), phone, `из ${bots} стартов`)}
+    ${convCard("Номер → «Оплатить»", pct1(payStart, phone), payStart, `из ${phone} с номером`, "warn")}
+    ${convCard("«Оплатить» → успех", pct1(payOk, payStart), payOk, `из ${payStart} кликов оплаты`, "warn")}
+    ${convCard("Визит → оплата", pct1(payOk, visits), payOk, `из ${visits} визитов`)}
   </div>`;
 }
 
 function renderCharts(data){
-  const t = data.totals || {};
   chartsEl.innerHTML = `
     <section class="card">
-      <h2>Воронки: плохие и хорошие</h2>
-      <p class="meta">Слева — без /start, справа — bot_started. Этапы на одном уровне. На каждом: количество, % от всех в группе, % от предыдущего этапа, time min/max/avg/median.</p>
-      ${dualFunnelsHtml(data)}
+      <h2>Три полные воронки</h2>
+      <p class="meta">Сайт (секции) → клик TG → /start → показать номер → клик «Оплатить» → оплата. Слева все, в центре плохие (без /start), справа хорошие. На каждом этапе: кол-во, % от всех, % от предыдущего, time min/max/avg/median.</p>
+      ${tripleFunnelsHtml(data)}
     </section>
-    <div class="charts-top">
-      <section class="card">
-        <h2>Общая воронка</h2>
-        <p class="meta">Все визиты после фильтров</p>
-        ${visualFunnel(t.sections || [], t.visits || 0, t.page_sec)}
-      </section>
-      <section class="card">
-        <h2>Конверсии</h2>
-        <p class="meta">Ключевые переходы с процентами</p>
-        ${conversionsHtml(data)}
-      </section>
-    </div>`;
+    <section class="card">
+      <h2>Конверсии</h2>
+      <p class="meta">Ключевые переходы воронки сайт → бот → оплата</p>
+      ${conversionsHtml(data)}
+    </section>`;
 }
 
 function block(title, data, extra=""){
@@ -566,6 +530,8 @@ function block(title, data, extra=""){
       <span class="pill">визитов ${data.visits}</span>
       <span class="pill">клик TG ${data.clicked_telegram} (${pct(data.click_rate)}%)</span>
       <span class="pill good">bot ${data.bot_started} (${pct(data.bot_rate)}%)</span>
+      <span class="pill bot">номер ${data.show_phone || 0}</span>
+      <span class="pill bot">оплата ${data.payment_success || 0}</span>
       <span class="pill">page: ${fmt(data.page_sec)}</span>
       ${extra}
     </div>
@@ -582,6 +548,19 @@ function reachDots(sections){
   }).join("")}</div>`;
 }
 
+function botDots(v){
+  const stages = [
+    ["tg", v.clicked_telegram],
+    ["bot", v.bot_started],
+    ["phone", v.show_phone],
+    ["pay", v.payment_started],
+    ["ok", v.payment_success]
+  ];
+  return `<div class="sec-reach" title="этапы бота">${stages.map(([k, on]) =>
+    `<span class="dot-s${on ? " on" : ""}" title="${k}"></span>`
+  ).join("")}</div>`;
+}
+
 function visitTable(visits){
   if (!visits?.length) return `<section class="card"><h2>Визиты</h2><p class="meta">Нет строк</p></section>`;
   const rows = visits.map(v => `
@@ -592,6 +571,7 @@ function visitTable(visits){
       <td class="num">${v.clicked_telegram ? "да" : "нет"} / ${v.bot_started ? '<span class="good">да</span>' : "нет"}</td>
       <td class="num">${v.page_sec ?? "—"}</td>
       <td>${reachDots(v.sections)}</td>
+      <td>${botDots(v)}</td>
       <td>
         <details class="visits">
           <summary>${escapeHtml(v.session_id)}</summary>
@@ -601,11 +581,11 @@ function visitTable(visits){
     </tr>`).join("");
   return `<section class="card">
     <h2>Визиты</h2>
-    <p class="meta">Зелёные точки — до какой секции доскроллил. Раскрой session для JSON.</p>
+    <p class="meta">Зелёные точки слева — секции сайта; справа — бот (TG → /start → номер → оплата → успех).</p>
     <table>
       <thead><tr>
         <th>время UTC</th><th>кампания / объявление</th><th>ключ</th>
-        <th>TG / bot</th><th>сек</th><th>путь</th><th>session</th>
+        <th>TG / bot</th><th>сек</th><th>сайт</th><th>бот</th><th>session</th>
       </tr></thead>
       <tbody>${rows}</tbody>
     </table>

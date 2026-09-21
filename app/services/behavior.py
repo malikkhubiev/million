@@ -39,6 +39,23 @@ SECTION_LABELS = {
     "purchase": "Прикоснись к себе настоящей",
 }
 
+# Этапы после лендинга (бот + оплата)
+BOT_FUNNEL_ORDER = [
+    "clicked_telegram",
+    "bot_started",
+    "show_phone",
+    "payment_started",
+    "payment_success",
+]
+
+BOT_FUNNEL_LABELS = {
+    "clicked_telegram": "Клик в Telegram",
+    "bot_started": "Старт бота /start",
+    "show_phone": "Показать номер",
+    "payment_started": "Клик «Оплатить»",
+    "payment_success": "Оплата успешна",
+}
+
 GroupBy = Literal[
     "none",
     "utm_content",
@@ -133,8 +150,12 @@ async def upsert_behavior(
         visit.page_ms = max(visit.page_ms or 0, int(page_ms))
     if clicked_telegram:
         visit.clicked_telegram = 1
+        if visit.clicked_telegram_ms is None and page_ms is not None:
+            visit.clicked_telegram_ms = max(0, int(page_ms))
     if bot_started:
         visit.bot_started = 1
+        if visit.bot_started_ms is None and page_ms is not None:
+            visit.bot_started_ms = max(0, int(page_ms))
     visit.updated_at = _utcnow()
 
     by_key = {row.key: row for row in visit.sections}
@@ -182,6 +203,85 @@ async def mark_bot_started(
     session_id: str | None = None,
     telegram_user_id: int | None = None,
 ) -> int:
+    return await mark_behavior_stage(
+        session,
+        stage="bot_started",
+        metrika_client_id=metrika_client_id,
+        session_id=session_id,
+        telegram_user_id=telegram_user_id,
+    )
+
+
+def _visit_age_ms(visit: BehaviorVisit) -> int:
+    created = _as_utc(visit.created_at)
+    if not created:
+        return 0
+    return max(0, int((_utcnow() - created).total_seconds() * 1000))
+
+
+def _set_stage(visit: BehaviorVisit, stage: str, *, time_ms: int | None = None) -> bool:
+    """Ставит флаг этапа и time_to_ms (один раз). Возвращает True если что-то изменилось."""
+    changed = False
+    age = time_ms if time_ms is not None else _visit_age_ms(visit)
+
+    def _flag(attr: str, ms_attr: str, also: list[str] | None = None) -> None:
+        nonlocal changed
+        if not getattr(visit, attr, 0):
+            setattr(visit, attr, 1)
+            changed = True
+        if getattr(visit, ms_attr, None) is None:
+            setattr(visit, ms_attr, age)
+            changed = True
+        for other in also or []:
+            if other == "clicked_telegram" and not visit.clicked_telegram:
+                visit.clicked_telegram = 1
+                if visit.clicked_telegram_ms is None:
+                    visit.clicked_telegram_ms = age
+                changed = True
+            elif other == "bot_started" and not visit.bot_started:
+                visit.bot_started = 1
+                if visit.bot_started_ms is None:
+                    visit.bot_started_ms = age
+                changed = True
+            elif other == "show_phone" and not getattr(visit, "show_phone", 0):
+                visit.show_phone = 1
+                if visit.show_phone_ms is None:
+                    visit.show_phone_ms = age
+                changed = True
+            elif other == "payment_started" and not getattr(visit, "payment_started", 0):
+                visit.payment_started = 1
+                if visit.payment_started_ms is None:
+                    visit.payment_started_ms = age
+                changed = True
+
+    if stage == "clicked_telegram":
+        _flag("clicked_telegram", "clicked_telegram_ms")
+    elif stage == "bot_started":
+        _flag("bot_started", "bot_started_ms", also=["clicked_telegram"])
+    elif stage == "show_phone":
+        _flag("show_phone", "show_phone_ms", also=["clicked_telegram", "bot_started"])
+    elif stage == "payment_started":
+        _flag(
+            "payment_started",
+            "payment_started_ms",
+            also=["clicked_telegram", "bot_started", "show_phone"],
+        )
+    elif stage == "payment_success":
+        _flag(
+            "payment_success",
+            "payment_success_ms",
+            also=["clicked_telegram", "bot_started", "show_phone", "payment_started"],
+        )
+    return changed
+
+
+async def _find_visits_for_identity(
+    session: AsyncSession,
+    *,
+    metrika_client_id: str | None = None,
+    session_id: str | None = None,
+    telegram_user_id: int | None = None,
+) -> list[BehaviorVisit]:
     visits: list[BehaviorVisit] = []
     cid = _clean_cid(metrika_client_id)
     if session_id:
@@ -189,6 +289,14 @@ async def mark_bot_started(
         row = result.scalar_one_or_none()
         if row:
             visits.append(row)
+    if telegram_user_id:
+        result = await session.execute(
+            select(BehaviorVisit)
+            .where(BehaviorVisit.telegram_user_id == int(telegram_user_id))
+            .order_by(BehaviorVisit.updated_at.desc())
+            .limit(5)
+        )
+        visits.extend(result.scalars().all())
     if cid:
         result = await session.execute(
             select(BehaviorVisit)
@@ -197,22 +305,153 @@ async def mark_bot_started(
             .limit(5)
         )
         visits.extend(result.scalars().all())
+    return visits
 
+
+async def mark_behavior_stage(
+    session: AsyncSession,
+    *,
+    stage: str,
+    metrika_client_id: str | None = None,
+    session_id: str | None = None,
+    telegram_user_id: int | None = None,
+    event_at: datetime | None = None,
+    commit: bool = True,
+) -> int:
+    """Отмечает этап воронки бота на связанных визитах лендинга."""
+    visits = await _find_visits_for_identity(
+        session,
+        metrika_client_id=metrika_client_id,
+        session_id=session_id,
+        telegram_user_id=telegram_user_id,
+    )
     seen: set[int] = set()
     updated = 0
     for visit in visits:
         if visit.id in seen:
             continue
         seen.add(visit.id)
-        visit.bot_started = 1
-        visit.clicked_telegram = 1
-        if telegram_user_id:
-            visit.telegram_user_id = telegram_user_id
-        visit.updated_at = _utcnow()
-        updated += 1
-    if updated:
+        time_ms = None
+        if event_at is not None and visit.created_at is not None:
+            created = _as_utc(visit.created_at)
+            ev = _as_utc(event_at) or event_at
+            if created and ev:
+                time_ms = max(0, int((ev - created).total_seconds() * 1000))
+        if telegram_user_id and not visit.telegram_user_id:
+            visit.telegram_user_id = int(telegram_user_id)
+        if _set_stage(visit, stage, time_ms=time_ms):
+            visit.updated_at = _utcnow()
+            updated += 1
+    if updated and commit:
         await session.commit()
     return updated
+
+
+async def load_client_bot_index(session: AsyncSession) -> dict[str, dict[str, Any]]:
+    """Индекс клиентов по telegram_user_id / metrika_client_id → этапы из phone/payments."""
+    from app.models import Client
+
+    result = await session.execute(select(Client).options(selectinload(Client.payments)))
+    clients = list(result.scalars().unique().all())
+    index: dict[str, dict[str, Any]] = {}
+
+    def put(key: str | None, payload: dict[str, Any]) -> None:
+        if not key:
+            return
+        prev = index.get(key)
+        if not prev:
+            index[key] = payload
+            return
+        for k in ("show_phone", "payment_started", "payment_success"):
+            prev[k] = bool(prev.get(k) or payload.get(k))
+        for k in ("show_phone_at", "payment_started_at", "payment_success_at"):
+            a, b = prev.get(k), payload.get(k)
+            if a and b:
+                prev[k] = min(a, b)
+            else:
+                prev[k] = a or b
+
+    for client in clients:
+        payments = list(client.payments or [])
+        first_pay = None
+        first_paid = None
+        for p in payments:
+            created = _as_utc(p.created_at)
+            if created and (first_pay is None or created < first_pay):
+                first_pay = created
+            if p.status == "succeeded":
+                paid = _as_utc(p.paid_at) or _as_utc(p.updated_at) or created
+                if paid and (first_paid is None or paid < first_paid):
+                    first_paid = paid
+        payload = {
+            "show_phone": bool(client.phone),
+            "show_phone_at": _as_utc(client.updated_at) if client.phone else None,
+            # payment_started только из флага визита (клик «Оплатить») —
+            # платёж создаётся уже на show_phone, поэтому payments ≠ start.
+            "payment_started": False,
+            "payment_started_at": None,
+            "payment_success": first_paid is not None,
+            "payment_success_at": first_paid,
+            "telegram_user_id": client.telegram_user_id,
+            "metrika_client_id": client.metrika_client_id,
+        }
+        if client.telegram_user_id:
+            put(f"tg:{client.telegram_user_id}", payload)
+        cid = _clean_cid(client.metrika_client_id)
+        if cid:
+            put(f"cid:{cid}", payload)
+    return index
+
+
+def _client_info_for_visit(visit: BehaviorVisit, index: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    if visit.telegram_user_id:
+        hit = index.get(f"tg:{visit.telegram_user_id}")
+        if hit:
+            return hit
+    cid = _clean_cid(visit.metrika_client_id)
+    if cid:
+        return index.get(f"cid:{cid}") or {}
+    return {}
+
+
+def _stage_reached_ms(
+    visit: BehaviorVisit,
+    key: str,
+    client_info: dict[str, Any] | None = None,
+) -> tuple[bool, int | None]:
+    info = client_info or {}
+    if key == "clicked_telegram":
+        return bool(visit.clicked_telegram), getattr(visit, "clicked_telegram_ms", None)
+    if key == "bot_started":
+        return bool(visit.bot_started), getattr(visit, "bot_started_ms", None)
+    if key == "show_phone":
+        reached = bool(getattr(visit, "show_phone", 0) or info.get("show_phone"))
+        ms = getattr(visit, "show_phone_ms", None)
+        if ms is None and reached and info.get("show_phone_at") and visit.created_at:
+            created = _as_utc(visit.created_at)
+            at = info["show_phone_at"]
+            if created and at:
+                ms = max(0, int((at - created).total_seconds() * 1000))
+        return reached, ms
+    if key == "payment_started":
+        reached = bool(getattr(visit, "payment_started", 0) or info.get("payment_started"))
+        ms = getattr(visit, "payment_started_ms", None)
+        if ms is None and reached and info.get("payment_started_at") and visit.created_at:
+            created = _as_utc(visit.created_at)
+            at = info["payment_started_at"]
+            if created and at:
+                ms = max(0, int((at - created).total_seconds() * 1000))
+        return reached, ms
+    if key == "payment_success":
+        reached = bool(getattr(visit, "payment_success", 0) or info.get("payment_success"))
+        ms = getattr(visit, "payment_success_ms", None)
+        if ms is None and reached and info.get("payment_success_at") and visit.created_at:
+            created = _as_utc(visit.created_at)
+            at = info["payment_success_at"]
+            if created and at:
+                ms = max(0, int((at - created).total_seconds() * 1000))
+        return reached, ms
+    return False, None
 
 
 def _metric(values: list[float]) -> dict[str, float | int | None]:
@@ -238,7 +477,7 @@ def _fmt_metric(m: dict[str, Any], unit: str = "с") -> str:
     )
 
 
-def dump_visit(visit: BehaviorVisit) -> dict[str, Any]:
+def dump_visit(visit: BehaviorVisit, client_info: dict[str, Any] | None = None) -> dict[str, Any]:
     created = _as_utc(visit.created_at)
     updated = _as_utc(visit.updated_at)
     sections = []
@@ -269,6 +508,20 @@ def dump_visit(visit: BehaviorVisit) -> dict[str, Any]:
                 "dwell_sec": round((row.dwell_ms or 0) / 1000, 2),
             }
         )
+
+    bot_stages = []
+    for key in BOT_FUNNEL_ORDER:
+        reached, ms = _stage_reached_ms(visit, key, client_info)
+        bot_stages.append(
+            {
+                "key": key,
+                "label": BOT_FUNNEL_LABELS.get(key, key),
+                "reached": reached,
+                "time_to_ms": ms,
+                "time_to_sec": round(ms / 1000, 2) if ms is not None else None,
+            }
+        )
+
     return {
         "id": visit.id,
         "session_id": visit.session_id,
@@ -284,16 +537,24 @@ def dump_visit(visit: BehaviorVisit) -> dict[str, Any]:
         "utm_term": visit.utm_term,
         "clicked_telegram": bool(visit.clicked_telegram),
         "bot_started": bool(visit.bot_started),
+        "show_phone": next((s["reached"] for s in bot_stages if s["key"] == "show_phone"), False),
+        "payment_started": next((s["reached"] for s in bot_stages if s["key"] == "payment_started"), False),
+        "payment_success": next((s["reached"] for s in bot_stages if s["key"] == "payment_success"), False),
         "page_ms": visit.page_ms,
         "page_sec": round((visit.page_ms or 0) / 1000, 2) if visit.page_ms is not None else None,
         "landing_url": visit.landing_url,
         "referrer": visit.referrer,
         "sections": sections,
+        "bot_stages": bot_stages,
     }
 
 
-def _group_stats(visits: list[BehaviorVisit]) -> dict[str, Any]:
+def _group_stats(
+    visits: list[BehaviorVisit],
+    client_index: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     total = len(visits)
+    index = client_index or {}
     out_sections: list[dict[str, Any]] = []
     for key in SECTION_ORDER:
         reached_flags: list[int] = []
@@ -321,14 +582,89 @@ def _group_stats(visits: list[BehaviorVisit]) -> dict[str, Any]:
                 "dwell_sec": _metric(dwell),
             }
         )
+
+    bot_out: list[dict[str, Any]] = []
+    for key in BOT_FUNNEL_ORDER:
+        reached_flags = []
+        time_to = []
+        for visit in visits:
+            info = _client_info_for_visit(visit, index)
+            reached, ms = _stage_reached_ms(visit, key, info)
+            reached_flags.append(1 if reached else 0)
+            if reached and ms is not None:
+                time_to.append(ms / 1000)
+        bot_out.append(
+            {
+                "key": key,
+                "label": BOT_FUNNEL_LABELS.get(key, key),
+                "reached_count": sum(reached_flags),
+                "reached_rate": round(sum(reached_flags) / total, 4) if total else 0,
+                "time_to_sec": _metric(time_to),
+            }
+        )
+
+    funnel: list[dict[str, Any]] = []
+    funnel.append(
+        {
+            "key": "_visits",
+            "label": "Визиты",
+            "kind": "root",
+            "reached_count": total,
+            "reached_rate": 1.0 if total else 0,
+            "from_prev_rate": 1.0 if total else 0,
+            "time_to_sec": _metric([(v.page_ms or 0) / 1000 for v in visits if v.page_ms is not None]),
+        }
+    )
+    for s in out_sections:
+        prev = funnel[-1]["reached_count"] or 0
+        count = s["reached_count"]
+        funnel.append(
+            {
+                "key": s["key"],
+                "label": s["label"],
+                "kind": "section",
+                "reached_count": count,
+                "reached_rate": s["reached_rate"],
+                "from_prev_rate": round(count / prev, 4) if prev else 0,
+                "time_to_sec": s["time_to_sec"],
+                "dwell_sec": s.get("dwell_sec"),
+            }
+        )
+    for s in bot_out:
+        prev = funnel[-1]["reached_count"] or 0
+        count = s["reached_count"]
+        funnel.append(
+            {
+                "key": s["key"],
+                "label": s["label"],
+                "kind": "bot",
+                "reached_count": count,
+                "reached_rate": s["reached_rate"],
+                "from_prev_rate": round(count / prev, 4) if prev else 0,
+                "time_to_sec": s["time_to_sec"],
+            }
+        )
+
+    show_n = next((s["reached_count"] for s in bot_out if s["key"] == "show_phone"), 0)
+    pay_n = next((s["reached_count"] for s in bot_out if s["key"] == "payment_started"), 0)
+    ok_n = next((s["reached_count"] for s in bot_out if s["key"] == "payment_success"), 0)
+
     return {
         "visits": total,
         "clicked_telegram": sum(1 for v in visits if v.clicked_telegram),
         "bot_started": sum(1 for v in visits if v.bot_started),
+        "show_phone": show_n,
+        "payment_started": pay_n,
+        "payment_success": ok_n,
         "click_rate": round(sum(1 for v in visits if v.clicked_telegram) / total, 4) if total else 0,
         "bot_rate": round(sum(1 for v in visits if v.bot_started) / total, 4) if total else 0,
+        "show_phone_rate": round(show_n / total, 4) if total else 0,
+        "payment_started_rate": round(pay_n / total, 4) if total else 0,
+        "payment_success_rate": round(ok_n / total, 4) if total else 0,
         "page_sec": _metric([(v.page_ms or 0) / 1000 for v in visits if v.page_ms is not None]),
         "sections": out_sections,
+        "bot_stages": bot_out,
+        "funnel": funnel,
     }
 
 
@@ -497,6 +833,7 @@ async def behavior_report(
     limit: int = 500,
 ) -> dict[str, Any]:
     all_visits = await load_visits(session)
+    client_index = await load_client_bot_index(session)
     filtered = filter_visits(
         all_visits,
         date_from=date_from,
@@ -519,11 +856,14 @@ async def behavior_report(
         for visit in sorted_visits:
             groups_map.setdefault(_visit_group_key(visit, group_by), []).append(visit)
     groups = [
-        {"group": name, "group_by": group_by, **_group_stats(items)}
+        {"group": name, "group_by": group_by, **_group_stats(items, client_index)}
         for name, items in sorted(groups_map.items(), key=lambda x: (-len(x[1]), x[0]))
     ]
 
-    visit_rows = [dump_visit(v) for v in sorted_visits[: max(0, min(limit, 5000))]] if include_visits else []
+    visit_rows = [
+        dump_visit(v, _client_info_for_visit(v, client_index))
+        for v in sorted_visits[: max(0, min(limit, 5000))]
+    ] if include_visits else []
 
     return {
         "generated_at": _utcnow().isoformat(),
@@ -546,19 +886,19 @@ async def behavior_report(
             "limit": limit,
         },
         "facets": _facet_values(all_visits),
-        "totals": _group_stats(sorted_visits),
+        "totals": _group_stats(sorted_visits, client_index),
         "by_telegram": {
-            "bot_started": _group_stats([v for v in sorted_visits if v.bot_started]),
-            "not_bot_started": _group_stats([v for v in sorted_visits if not v.bot_started]),
-            "clicked_telegram": _group_stats([v for v in sorted_visits if v.clicked_telegram]),
-            "not_clicked_telegram": _group_stats([v for v in sorted_visits if not v.clicked_telegram]),
+            "bot_started": _group_stats([v for v in sorted_visits if v.bot_started], client_index),
+            "not_bot_started": _group_stats([v for v in sorted_visits if not v.bot_started], client_index),
+            "clicked_telegram": _group_stats([v for v in sorted_visits if v.clicked_telegram], client_index),
+            "not_clicked_telegram": _group_stats([v for v in sorted_visits if not v.clicked_telegram], client_index),
         },
         "groups": groups,
         "visits_returned": len(visit_rows),
         "visits_matched": len(sorted_visits),
         "visits_total_db": len(all_visits),
         "visits": visit_rows,
-        "note": "avg/median/min/max/sum по time_to и dwell — только среди дошедших до секции; даты в UTC ISO",
+        "note": "Полная воронка: секции сайта + клик TG + /start + номер + оплата. time_to — среди дошедших; даты UTC ISO",
     }
 
 
@@ -580,9 +920,19 @@ def export_txt(report: dict[str, Any]) -> str:
     lines.append(
         f"visits={totals.get('visits')} clicked_telegram={totals.get('clicked_telegram')} "
         f"({(totals.get('click_rate') or 0)*100:.1f}%) bot_started={totals.get('bot_started')} "
-        f"({(totals.get('bot_rate') or 0)*100:.1f}%)"
+        f"({(totals.get('bot_rate') or 0)*100:.1f}%) show_phone={totals.get('show_phone')} "
+        f"payment_started={totals.get('payment_started')} payment_success={totals.get('payment_success')}"
     )
     lines.append(f"page_sec: {_fmt_metric(totals.get('page_sec') or {})}")
+    lines.append("")
+    lines.append("Полная воронка:")
+    for s in totals.get("funnel") or []:
+        lines.append(
+            f"  [{s.get('kind')}|{s['key']}] {s['label']} | {s['reached_count']} "
+            f"({(s.get('reached_rate') or 0)*100:.1f}% от всех, "
+            f"{(s.get('from_prev_rate') or 0)*100:.1f}% от пред.)"
+        )
+        lines.append(f"    time_to: {_fmt_metric(s.get('time_to_sec') or {})}")
     lines.append("")
     lines.append("Секции:")
     for s in totals.get("sections") or []:
@@ -593,20 +943,27 @@ def export_txt(report: dict[str, Any]) -> str:
         lines.append(f"    time_to: {_fmt_metric(s.get('time_to_sec') or {})}")
         lines.append(f"    dwell:   {_fmt_metric(s.get('dwell_sec') or {})}")
     lines.append("")
+    lines.append("Этапы бота:")
+    for s in totals.get("bot_stages") or []:
+        lines.append(
+            f"  [{s['key']}] {s['label']} | {s['reached_count']} "
+            f"({(s.get('reached_rate') or 0)*100:.1f}%) | time_to: {_fmt_metric(s.get('time_to_sec') or {})}"
+        )
+    lines.append("")
 
     lines.append("--- ПО TELEGRAM ---")
     for name, block in (report.get("by_telegram") or {}).items():
         lines.append(
             f"{name}: visits={block.get('visits')} bot={block.get('bot_started')} "
-            f"click={block.get('clicked_telegram')} page={_fmt_metric(block.get('page_sec') or {})}"
+            f"click={block.get('clicked_telegram')} phone={block.get('show_phone')} "
+            f"pay={block.get('payment_started')} ok={block.get('payment_success')} "
+            f"page={_fmt_metric(block.get('page_sec') or {})}"
         )
-        for s in block.get("sections") or []:
-            if not s.get("reached_count"):
-                continue
+        for s in block.get("funnel") or []:
             lines.append(
-                f"  {s['key']}: reach={s['reached_count']} "
-                f"tt={_fmt_metric(s.get('time_to_sec') or {})} "
-                f"dw={_fmt_metric(s.get('dwell_sec') or {})}"
+                f"  {s['key']}: {s['reached_count']} "
+                f"({(s.get('reached_rate') or 0)*100:.1f}% / prev {(s.get('from_prev_rate') or 0)*100:.1f}%) "
+                f"tt={_fmt_metric(s.get('time_to_sec') or {})}"
             )
     lines.append("")
 

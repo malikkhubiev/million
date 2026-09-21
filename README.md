@@ -20,22 +20,24 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 Узнать id канала: `python -m app.scripts.discover_channel`  
 Проверить invite: `python -m app.scripts.test_invite`
 
-## Render
+## Railway (прод)
 
-Репозиторий [million](https://github.com/malikkhubiev/million). Root Directory — корень репозитория (не `server`).
+Пошагово: **[RAILWAY.md](./RAILWAY.md)**.
 
-Python: **3.12** (файл `.python-version` и `PYTHON_VERSION=3.12.10`). Не оставляйте дефолт Render — это 3.14, и `pydantic-core` / `orjson` тогда собираются из исходников и падают.
+Кратко:
 
-Build: `pip install -r requirements.txt`  
-Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Build: `Dockerfile` (Python 3.12.10)
+- Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+- Volume: `/app/data` (иначе SQLite сотрётся при редеплое)
+- `APP_BASE_URL=https://….up.railway.app`, `TELEGRAM_MODE=webhook`
+- Webhook ЮKassa: `https://….up.railway.app/api/yookassa/webhook`
+- После деплоя обнови `LIFE_API` на лендинге (Vercel)
 
-Без `--reload` (это только для локальной разработки). Хост — `0.0.0.0`, не `$HOST`: Render задаёт только `$PORT`.
+Шаблон переменных: `railway.env.example`.
 
-Переменные: `APP_BASE_URL`, `YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_CHANNEL_ID`, `TELEGRAM_MODE=webhook`, `TELEGRAM_WEBHOOK_SECRET`. Обязательно `METRIKA_MP_TOKEN` (Measurement Protocol в настройках счётчика).
+## Render (устарело)
 
-Webhook ЮKassa: `https://<сервис>.onrender.com/api/yookassa/webhook`
-
-SQLite на free Render сбрасывается при редеплое — для истории подключите Postgres.
+Раньше сервис жил на `*.onrender.com`. Конфиг `render.yaml` оставлен для истории — новый прод только на Railway.
 
 ## Архитектура оплаты
 
@@ -54,4 +56,4 @@ SQLite на free Render сбрасывается при редеплое — д�
 
 Даты набора и старта задаются переменными `ENROLLMENT_DEADLINE` и `COURSE_START_DATE`.
 
-Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл секций: `headline_*` / `section_*`. Дашборд поведения (открытый): https://million-zcqy.onrender.com/admin/behavior · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM для 9 объявлений — в `website/README.md`.
+Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл секций: `headline_*` / `section_*`. Дашборд: `https://<railway>/admin/behavior` · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM — в `website/README.md`. Деплой API: [RAILWAY.md](./RAILWAY.md).

@@ -426,12 +426,19 @@ async def pay_click_redirect(
         client.telegram_user_id if client else None,
     )
     from app.services.activity_log import log_payment_started
+    from app.services.behavior import mark_behavior_stage
 
     log_payment_started(
         telegram_user_id=client.telegram_user_id if client else None,
         order_id=payment.order_id,
         product_code=payment.product_code,
         amount=payment.amount_value,
+    )
+    await mark_behavior_stage(
+        session,
+        stage="payment_started",
+        telegram_user_id=client.telegram_user_id if client else None,
+        metrika_client_id=client.metrika_client_id if client else None,
     )
     if cid:
         background.add_task(
@@ -524,7 +531,7 @@ async def index(settings: Settings = Depends(get_settings)):
     path = SITE / "index.html"
     if path.exists():
         return FileResponse(path)
-    # Лендинг на Vercel — корень API не должен отдавать 404 в логах Render.
+    # Лендинг на Vercel — корень API не должен отдавать 404 в логах.
     return RedirectResponse(settings.site_link, status_code=302)
 
 

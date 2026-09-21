@@ -288,12 +288,25 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
 async def _track_payment_success(settings: Settings, payment: Payment) -> None:
     client = payment.client
     from app.services.activity_log import log_payment_success
+    from app.services.behavior import mark_behavior_stage
+    from app.db import SessionLocal
 
     log_payment_success(
         telegram_user_id=client.telegram_user_id if client else None,
         order_id=payment.order_id,
         amount=payment.amount_value,
     )
+    try:
+        async with SessionLocal() as session:
+            await mark_behavior_stage(
+                session,
+                stage="payment_success",
+                telegram_user_id=client.telegram_user_id if client else None,
+                metrika_client_id=client.metrika_client_id if client else None,
+                event_at=payment.paid_at,
+            )
+    except Exception:
+        logger.exception("behavior mark payment_success")
     cid = metrika_cid_for(client.metrika_client_id if client else None, client.telegram_user_id if client else None)
     if not cid:
         return

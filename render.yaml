@@ -1,3 +1,6 @@
+# Устарел: прод перенесён на Railway (см. RAILWAY.md).
+# Оставлен для истории / экстренного отката.
+
 services:
   - type: web
     name: life-energy-api
