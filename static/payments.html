@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Оплаты</title>
+<style>
+:root{
+  --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
+  --card:#fffcf7;--good:#2a6b45;--warn:#9a5b20;--bad:#8a3a2a;--accent:#1f4d6e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:
+  radial-gradient(900px 400px at 10% -10%,rgba(31,77,110,.08),transparent),
+  radial-gradient(700px 360px at 100% 0%,rgba(42,107,69,.07),transparent),
+  var(--bg);color:var(--ink);padding:20px 14px 72px}
+h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
+.lead{color:var(--muted);margin-bottom:14px;max-width:920px;line-height:1.45;font-size:14px}
+.topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.admin-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.admin-nav a{
+  font:inherit;padding:7px 12px;border:1px solid var(--line);border-radius:8px;
+  text-decoration:none;color:var(--muted);background:var(--card);font-size:13px;
+}
+.admin-nav a:hover{color:var(--ink);border-color:rgba(26,23,20,.25)}
+.admin-nav a.active{background:#1a1714;color:#f7f1e8;border-color:#1a1714}
+.nav{display:flex;gap:8px;flex-wrap:wrap}
+a.btn,button{font:inherit;padding:9px 14px;border:1px solid #1a1714;background:#1a1714;color:#f7f1e8;cursor:pointer;text-decoration:none;display:inline-block;border-radius:8px;font-size:13px}
+a.btn.secondary,button.secondary{background:transparent;color:var(--ink)}
+.hint{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
+.hint code{background:rgba(26,23,20,.06);padding:1px 6px;border-radius:4px;font-size:12px;word-break:break-all}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:end}
+.filters label{display:flex;flex-direction:column;gap:3px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.filters select{font:inherit;padding:7px 9px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:13px}
+.err{color:var(--bad);margin-bottom:12px;font-size:13px}
+.ok{color:var(--good);margin-bottom:12px;font-size:13px}
+.wrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:780px}
+th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:rgba(26,23,20,.03)}
+tr:last-child td{border-bottom:0}
+.mono{font-variant-numeric:tabular-nums;font-family:ui-monospace,Consolas,monospace;font-size:12px}
+.pill{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;border:1px solid var(--line);background:#fff}
+.pill.ok{border-color:rgba(42,107,69,.35);background:rgba(42,107,69,.08);color:var(--good)}
+.pill.no{border-color:rgba(138,58,42,.3);background:rgba(138,58,42,.06);color:var(--bad)}
+.pill.wait{border-color:rgba(154,91,32,.3);background:rgba(154,91,32,.08);color:var(--warn)}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+.actions button{padding:6px 10px;font-size:12px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Разделы">
+  <a href="/">Меню</a>
+  <a href="/admin/behavior">Дашборд</a>
+  <a class="active" href="/admin/payments">Оплаты</a>
+</nav>
+<div class="topbar">
+  <div>
+    <h1>Оплаты</h1>
+    <p class="lead">Telegram id, username, дата оплаты, сумма, отправлена ли пригласительная ссылка.</p>
+  </div>
+  <div class="nav">
+    <button type="button" id="btnRefresh">Обновить</button>
+    <button type="button" class="secondary" id="btnSyncOpen">Синхронизировать pending</button>
+  </div>
+</div>
+
+<div class="hint" id="webhookHint">
+  В ЮKassa → Настройки уведомлений URL должен быть:
+  <code id="webhookUrl">…</code>
+  (не старый Render). События: <code>payment.succeeded</code>, <code>payment.canceled</code>, при необходимости <code>payment.waiting_for_capture</code>.
+</div>
+
+<div class="filters">
+  <label>Статус
+    <select id="status">
+      <option value="">все</option>
+      <option value="succeeded">succeeded</option>
+      <option value="pending">pending</option>
+      <option value="waiting_for_capture">waiting_for_capture</option>
+      <option value="canceled">canceled</option>
+    </select>
+  </label>
+</div>
+<div class="err" id="err" hidden></div>
+<div class="ok" id="msg" hidden></div>
+
+<div class="wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Telegram id</th>
+        <th>Username</th>
+        <th>Оплата</th>
+        <th>Сумма</th>
+        <th>Статус</th>
+        <th>Инвайт</th>
+        <th>Заказ</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="tbody">
+      <tr><td colspan="8" class="empty">Загрузка…</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const tbody = $("tbody");
+const err = $("err");
+const msg = $("msg");
+
+function fmtDt(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleString("ru-RU", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+}
+
+function showErr(t) { err.hidden = !t; err.textContent = t || ""; }
+function showMsg(t) { msg.hidden = !t; msg.textContent = t || ""; }
+
+function invitePill(p) {
+  if (p.invite_sent) return `<span class="pill ok">да · ${fmtDt(p.invite_sent_at)}</span>`;
+  if (p.status === "succeeded") return `<span class="pill no">нет</span>`;
+  return `<span class="pill wait">—</span>`;
+}
+
+function statusPill(s) {
+  if (s === "succeeded") return `<span class="pill ok">${s}</span>`;
+  if (s === "canceled") return `<span class="pill no">${s}</span>`;
+  return `<span class="pill wait">${s || "—"}</span>`;
+}
+
+function rowHtml(p) {
+  const un = p.telegram_username ? `@${p.telegram_username}` : "—";
+  const syncBtn = p.yookassa_payment_id
+    ? `<button type="button" class="secondary" data-sync="${p.order_id}">Sync</button>` : "";
+  const resendBtn = p.status === "succeeded"
+    ? `<button type="button" data-resend="${p.order_id}">Инвайт</button>` : "";
+  return `<tr>
+    <td class="mono">${p.telegram_user_id ?? "—"}</td>
+    <td>${un}</td>
+    <td class="mono">${fmtDt(p.paid_at || p.created_at)}</td>
+    <td class="mono">${p.amount} ${p.currency || "RUB"}</td>
+    <td>${statusPill(p.status)}</td>
+    <td>${invitePill(p)}</td>
+    <td class="mono">${p.order_id}</td>
+    <td><div class="actions">${syncBtn}${resendBtn}</div></td>
+  </tr>`;
+}
+
+async function load() {
+  showErr("");
+  const st = $("status").value;
+  const q = new URLSearchParams({ limit: "200" });
+  if (st) q.set("status", st);
+  const r = await fetch("/api/payments?" + q.toString());
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const data = await r.json();
+  const rows = data.payments || [];
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Пока нет оплат</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = rows.map(rowHtml).join("");
+}
+
+async function boot() {
+  try {
+    const h = await fetch("/api");
+    if (h.ok) {
+      const j = await h.json();
+      if (j.yookassa_webhook) $("webhookUrl").textContent = j.yookassa_webhook;
+    }
+  } catch (_) {}
+  try {
+    await load();
+  } catch (e) {
+    showErr(String(e.message || e));
+    tbody.innerHTML = `<tr><td colspan="8" class="empty">Ошибка загрузки</td></tr>`;
+  }
+}
+
+$("btnRefresh").onclick = () => load().catch((e) => showErr(String(e.message || e)));
+$("status").onchange = () => load().catch((e) => showErr(String(e.message || e)));
+$("btnSyncOpen").onclick = async () => {
+  showMsg(""); showErr("");
+  try {
+    const r = await fetch("/api/payments/sync-open", { method: "POST" });
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || "ошибка");
+    showMsg(`Синхронизировано: ${data.synced}`);
+    await load();
+  } catch (e) {
+    showErr(String(e.message || e));
+  }
+};
+
+tbody.addEventListener("click", async (ev) => {
+  const sync = ev.target.closest("[data-sync]");
+  const resend = ev.target.closest("[data-resend]");
+  if (!sync && !resend) return;
+  showMsg(""); showErr("");
+  const order = (sync || resend).dataset.sync || (sync || resend).dataset.resend;
+  const path = sync ? `/api/payments/${order}/sync` : `/api/payments/${order}/resend-invite`;
+  try {
+    const r = await fetch(path, { method: "POST" });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(typeof data.detail === "string" ? data.detail : JSON.stringify(data.detail || data));
+    showMsg(sync ? `Sync ${order}: ${data.payment?.status}` : `Инвайт ${order}: ${data.payment?.invite_sent ? "отправлен" : "не отправлен"}`);
+    await load();
+  } catch (e) {
+    showErr(String(e.message || e));
+  }
+});
+
+boot();
+</script>
+</body>
+</html>

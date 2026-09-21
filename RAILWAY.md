@@ -51,9 +51,18 @@ railway domain
 
 ## 4. Webhook ЮKassa
 
-В кабинете ЮKassa:
+В кабинете ЮKassa → **Настройки уведомлений** URL:
 
-`https://твой-домен.up.railway.app/api/yookassa/webhook`
+`https://million-production-87cd.up.railway.app/api/yookassa/webhook`
+
+(или актуальный `APP_BASE_URL` + `/api/yookassa/webhook`).
+
+**Не оставляй** старый Render вроде `https://aim-pay-bot-server-4c57.onrender.com/...` — иначе оплата пройдёт, а инвайт в боте не отправится.
+
+События: `payment.succeeded`, `payment.canceled`, при двухстадийных платежах ещё `payment.waiting_for_capture`.
+
+Дашборд оплат: `https://твой-домен.up.railway.app/admin/payments`  
+Кнопка **«Синхронизировать pending»** подтягивает статусы из API ЮKassa, если вебхук не дошёл.
 
 ## 5. Сайт (Vercel)
 

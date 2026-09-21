@@ -18,6 +18,13 @@ body{font-family:"Segoe UI",system-ui,sans-serif;background:
 h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
 .lead{color:var(--muted);margin-bottom:16px;max-width:880px;line-height:1.45;font-size:14px}
 .topbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin-bottom:14px}
+.admin-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.admin-nav a{
+  font:inherit;padding:7px 12px;border:1px solid var(--line);border-radius:8px;
+  text-decoration:none;color:var(--muted);background:var(--card);font-size:13px;
+}
+.admin-nav a:hover{color:var(--ink);border-color:rgba(26,23,20,.25)}
+.admin-nav a.active{background:#1a1714;color:#f7f1e8;border-color:#1a1714}
 .live{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 0 rgba(42,107,69,.5);animation:pulse 1.8s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(42,107,69,.45)}70%{box-shadow:0 0 0 10px rgba(42,107,69,0)}100%{box-shadow:0 0 0 0 rgba(42,107,69,0)}}
@@ -163,12 +170,19 @@ pre{white-space:pre-wrap;font-size:11px;line-height:1.4;background:#f4eee6;paddi
 </style>
 </head>
 <body>
+  <nav class="admin-nav" aria-label="Разделы">
+    <a href="/">Меню</a>
+    <a class="active" href="/admin/behavior">Дашборд</a>
+    <a href="/admin/payments">Оплаты</a>
+  </nav>
   <div class="topbar">
     <div>
       <h1>Поведение на лендинге</h1>
       <p class="lead">Три полные воронки: сайт → Telegram → бот → номер → оплата. Фильтры сразу. «Автообновление 10 с» — перезапрос данных каждые 10 секунд.</p>
     </div>
-    <div class="live"><span class="dot" aria-hidden="true"></span><span id="liveLabel">обновление…</span></div>
+    <div class="live">
+      <span class="dot" aria-hidden="true"></span><span id="liveLabel">обновление…</span>
+    </div>
   </div>
 
   <form id="filters" class="filters">

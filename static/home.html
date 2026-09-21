@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Меню</title>
+<style>
+:root{
+  --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
+  --card:#fffcf7;--accent:#1f4d6e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  min-height:100vh;display:flex;align-items:center;justify-content:center;
+  font-family:"Segoe UI",system-ui,sans-serif;color:var(--ink);
+  background:
+    radial-gradient(900px 420px at 12% -8%,rgba(31,77,110,.1),transparent),
+    radial-gradient(700px 380px at 100% 0%,rgba(42,107,69,.08),transparent),
+    var(--bg);
+  padding:24px 16px;
+}
+.shell{width:min(560px,100%)}
+.brand{font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+h1{font-size:clamp(28px,5vw,40px);font-weight:650;letter-spacing:-.02em;margin-bottom:8px}
+.lead{color:var(--muted);font-size:15px;line-height:1.45;margin-bottom:22px}
+.menu{display:grid;gap:12px}
+a.card{
+  display:block;background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:18px 18px 16px;text-decoration:none;color:inherit;
+  transition:border-color .15s ease, transform .15s ease;
+}
+a.card:hover{border-color:rgba(31,77,110,.35);transform:translateY(-1px)}
+a.card h2{font-size:18px;font-weight:650;margin-bottom:4px}
+a.card p{font-size:13px;color:var(--muted);line-height:1.4}
+.meta{margin-top:18px;font-size:12px;color:var(--muted)}
+.meta a{color:var(--accent)}
+</style>
+</head>
+<body>
+<div class="shell">
+  <div class="brand" id="appName">Верни себе себя</div>
+  <h1>Админка</h1>
+  <p class="lead">Выбери раздел. Между окнами можно переключаться из верхнего меню.</p>
+  <nav class="menu" aria-label="Разделы">
+    <a class="card" href="/admin/behavior">
+      <h2>Дашборд поведения</h2>
+      <p>Воронка сайт → Telegram → бот → номер → оплата, фильтры и выгрузка.</p>
+    </a>
+    <a class="card" href="/admin/payments">
+      <h2>Оплаты</h2>
+      <p>Telegram id, username, дата, сумма, статус инвайта, sync из ЮKassa.</p>
+    </a>
+  </nav>
+  <p class="meta"><a href="/api/health">health</a> · API: <a href="/api">/api</a></p>
+</div>
+<script>
+fetch("/api").then(r => r.json()).then(j => {
+  if (j && j.app) document.getElementById("appName").textContent = j.app;
+}).catch(() => {});
+</script>
+</body>
+</html>

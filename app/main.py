@@ -22,6 +22,10 @@ from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
     get_payment_by_order,
     handle_yookassa_notification,
+    list_payments,
+    payment_row,
+    resend_invite,
+    sync_open_payments,
     sync_payment_from_yookassa,
 )
 from app.services.telegram import TelegramClient
@@ -383,6 +387,77 @@ async def behavior_admin_page():
     return FileResponse(path)
 
 
+@app.get("/admin/payments")
+async def payments_admin_page():
+    path = Path(__file__).resolve().parent.parent / "static" / "payments.html"
+    if not path.exists():
+        raise HTTPException(404, "payments.html not found")
+    return FileResponse(path)
+
+
+@app.get("/api/payments")
+async def payments_list(
+    status: str | None = None,
+    limit: int = 100,
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await list_payments(session, status=status or None, limit=limit)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "payments": [payment_row(p) for p in rows],
+        "webhook_hint": "/api/yookassa/webhook",
+    }
+
+
+@app.post("/api/payments/sync-open")
+async def payments_sync_open(
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+):
+    """Подтянуть из ЮKassa все pending/waiting — если оплата прошла без вебхука."""
+    done = await sync_open_payments(session, settings, limit=50)
+    return {"ok": True, "synced": done}
+
+
+@app.post("/api/payments/{order_id}/sync")
+async def payment_sync(
+    order_id: str,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+):
+    payment = await get_payment_by_order(session, order_id.upper())
+    if not payment:
+        raise HTTPException(404, "Заказ не найден")
+    if not payment.yookassa_payment_id:
+        raise HTTPException(400, "Нет yookassa_payment_id")
+    try:
+        payment = await sync_payment_from_yookassa(session, settings, payment)
+    except Exception as exc:
+        logger.exception("sync payment %s", order_id)
+        raise HTTPException(502, f"ЮKassa: {exc}") from exc
+    return {"ok": True, "payment": payment_row(payment)}
+
+
+@app.post("/api/payments/{order_id}/resend-invite")
+async def payment_resend_invite(
+    order_id: str,
+    session: AsyncSession = Depends(get_session),
+    settings: Settings = Depends(get_settings),
+):
+    payment = await get_payment_by_order(session, order_id.upper())
+    if not payment:
+        raise HTTPException(404, "Заказ не найден")
+    try:
+        payment = await resend_invite(session, settings, payment)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        logger.exception("resend invite %s", order_id)
+        raise HTTPException(502, f"Не удалось отправить: {exc}") from exc
+    return {"ok": True, "payment": payment_row(payment)}
+
+
 @app.get("/api/orders/{order_id}")
 async def order_status(
     order_id: str,
@@ -404,6 +479,7 @@ async def order_status(
         "status": payment.status,
         "paid": payment.status == "succeeded",
         "invite_url": invite_url,
+        "invite_sent": bool(payment.invite_sent_at),
         "bot": settings.bot_link,
     }
 
@@ -529,15 +605,24 @@ if (SITE / "img").exists():
 
 
 @app.get("/")
-async def index(settings: Settings = Depends(get_settings)):
-    """Корень API — без редиректа на лендинг."""
+async def home_page():
+    path = Path(__file__).resolve().parent.parent / "static" / "home.html"
+    if not path.exists():
+        raise HTTPException(404, "home.html not found")
+    return FileResponse(path)
+
+
+@app.get("/api")
+async def api_index(settings: Settings = Depends(get_settings)):
     return {
         "ok": True,
         "app": settings.app_name,
         "env": settings.app_env,
         "dashboard": "/admin/behavior",
+        "payments": "/admin/payments",
         "health": "/api/health",
         "site": settings.site_link,
+        "yookassa_webhook": f"{settings.app_base_url.rstrip('/')}{settings.yookassa_webhook_path}",
     }
 
 

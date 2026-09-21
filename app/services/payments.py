@@ -18,6 +18,31 @@ from app.services.yookassa import YooKassaClient, YooKassaError
 logger = logging.getLogger(__name__)
 
 
+def _iso(dt: datetime | None) -> str | None:
+    return dt.isoformat() if dt else None
+
+
+def payment_row(payment: Payment) -> dict:
+    client = payment.client
+    invite = payment.invites[0] if payment.invites else None
+    return {
+        "id": payment.id,
+        "order_id": payment.order_id,
+        "telegram_user_id": client.telegram_user_id if client else None,
+        "telegram_username": client.telegram_username if client else None,
+        "amount": payment.amount_value,
+        "currency": payment.currency,
+        "status": payment.status,
+        "paid_at": _iso(payment.paid_at),
+        "created_at": _iso(payment.created_at),
+        "invite_sent": bool(payment.invite_sent_at),
+        "invite_sent_at": _iso(payment.invite_sent_at),
+        "invite_url": invite.invite_url if invite else None,
+        "fulfilled_at": _iso(payment.fulfilled_at),
+        "yookassa_payment_id": payment.yookassa_payment_id,
+    }
+
+
 def new_order_id() -> str:
     return "VS-" + uuid.uuid4().hex[:10].upper()
 
@@ -481,6 +506,39 @@ async def get_payment_by_order(session: AsyncSession, order_id: str) -> Payment 
         .where(Payment.order_id == order_id.upper())
     )
     return result.scalar_one_or_none()
+
+
+async def list_payments(
+    session: AsyncSession,
+    *,
+    status: str | None = None,
+    limit: int = 100,
+) -> list[Payment]:
+    q = (
+        select(Payment)
+        .options(selectinload(Payment.invites), selectinload(Payment.client))
+        .order_by(Payment.id.desc())
+        .limit(max(1, min(limit, 500)))
+    )
+    if status:
+        q = q.where(Payment.status == status)
+    result = await session.execute(q)
+    return list(result.scalars().all())
+
+
+async def resend_invite(session: AsyncSession, settings: Settings, payment: Payment) -> Payment:
+    """Повторно отправить инвайт (сбрасывает invite_sent_at, если ссылка уже есть)."""
+    if payment.status != "succeeded":
+        raise ValueError("Платёж ещё не succeeded")
+    payment.invite_sent_at = None
+    await session.commit()
+    await fulfill_payment(session, settings, payment)
+    result = await session.execute(
+        select(Payment)
+        .options(selectinload(Payment.invites), selectinload(Payment.client))
+        .where(Payment.id == payment.id)
+    )
+    return result.scalar_one()
 
 
 async def sync_open_payments(session: AsyncSession, settings: Settings, *, limit: int = 20) -> int:
