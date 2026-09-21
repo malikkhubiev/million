@@ -231,12 +231,9 @@ async def mark_webhook_seen(
 async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Payment) -> InviteLink | None:
     code = payment.product_code or "program"
     if code != "program":
-        already = bool(payment.fulfilled_at)
+        logger.warning("Пропуск неосновного продукта %s (%s)", code, payment.order_id)
         payment.fulfilled_at = payment.fulfilled_at or datetime.now(timezone.utc)
         await session.commit()
-        await deliver_vip(session, settings, payment)
-        if not already:
-            await _track_payment_success(settings, payment)
         return None
 
     result = await session.execute(
@@ -332,61 +329,6 @@ async def _track_payment_success(settings: Settings, payment: Payment) -> None:
         product_id=str(product["id"]),
         product_name=str(product["title"]),
     )
-
-
-async def deliver_vip(session: AsyncSession, settings: Settings, payment: Payment) -> None:
-    if payment.invite_sent_at:
-        return
-    client = payment.client
-    if not client or not client.telegram_user_id:
-        logger.info("Нет telegram_user_id для VIP-доставки %s", payment.order_id)
-        return
-    code = payment.product_code or "vip_diag"
-    markup = None
-    if code == "vip_train":
-        text = (
-            "Оплата персональной Трансформации прошла.\n\n"
-            "Напишу тебе, как начинаем эти 14 дней."
-        )
-    else:
-        text = (
-            "Диагностический созвон оплачен.\n\n"
-            "В течение 24 часов я свяжусь с тобой лично и назначу время.\n"
-            "На диагностике разберём твоё текущее состояние, что мешает жить так, "
-            "как ты хочешь, и к каким изменениям тебе нужно прийти.\n\n"
-            "Если личный формат тебе подойдёт и ты будешь готова продолжить — "
-            "следующий шаг 190 000 ₽. Условия оказания услуги и возврата — в оферте."
-        )
-        if client.phone and client.telegram_user_id:
-            try:
-                follow = await create_checkout(
-                    session,
-                    settings,
-                    name=client.name or "",
-                    telegram_user_id=client.telegram_user_id,
-                    telegram_username=client.telegram_username,
-                    phone=client.phone,
-                    source="telegram",
-                    product_code="vip_train",
-                )
-                url = pay_url_for(settings, follow)
-                if url:
-                    markup = {
-                        "inline_keyboard": [
-                            [{"text": "Персональная Трансформация · 190 000 ₽", "url": url}]
-                        ]
-                    }
-            except Exception:
-                logger.exception("Не удалось создать оплату 190 000 ₽ после диагностики %s", payment.order_id)
-    try:
-        from app.services.telegram import shared_tg
-
-        tg = await shared_tg(settings)
-        await tg.send_message(client.telegram_user_id, text, reply_markup=markup)
-        payment.invite_sent_at = datetime.now(timezone.utc)
-        await session.commit()
-    except TelegramError:
-        logger.exception("Не удалось отправить VIP-сообщение для %s", payment.order_id)
 
 
 async def deliver_invite(

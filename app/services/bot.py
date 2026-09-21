@@ -8,11 +8,8 @@ import time
 from collections import defaultdict
 from typing import Any
 
-from sqlalchemy import select
-
 from app.config import ROOT_DIR, Settings, get_settings
 from app.db import SessionLocal
-from app.models import Client
 from app.services.behavior import mark_bot_started
 from app.services.metrika import metrika_cid_for, track_goal, track_pageview
 from app.services.payments import (
@@ -41,39 +38,17 @@ PHONE_KB = {
 REMOVE_KB = {"remove_keyboard": True}
 
 AFTER_PHONE = (
-    "👏 Ты зарегистрирована на 14 дней)\n\n"
-    "Я приготовил для тебя 2 вида Трансформации.\nВыбирай, что подходит Твоему Типу Личности:\n\n"
-    "[1] Групповая Трансформация — 50 000 ₽\n\n"
-    "Это доступ к готовым Материалам в закрытом канале "
-    "(лицензия на цифровой контент). Всего 20 мест в наборе.\n\n"
-    "Сразу после оплаты — ссылка в канал. "
-    "Публикация Материалов стартует через 10 дней после закрытия набора "
-    "и идёт 14 дней.\n\n"
-    "Каждый день в канале:\n\n"
+    "Я Тебя поздравляю и очень за Тебя рад 🤍\n"
+    "Каждый день Ты будешь получать:\n\n"
     "   1. Аудио — пошаговый материал\n\n"
-    "   2. Ментальная тренировка\n\n"
-    "   3. Духовная практика\n\n"
-    "   4. Задание для самостоятельной работы\n\n"
-    "Индивидуальные созвоны и кураторство не входят. "
-    "На вопросы в канале могу отвечать по желанию — это не обязательство.\n\n"
-    "🌱 Формат: Если Ты готова работать с Материалами самостоятельно "
-    "в общем потоке набора.\n\n"
-    "[2] Персональная Трансформация — 200 000 ₽\n\n"
-    "   1. Первый шаг — диагностический созвон на 60 минут\n"
-    "[ 10 000 ₽ ].\n\n"
-    "   2. В течение 24 часов после оплаты Я свяжусь с тобой лично "
-    "и назначу время созвона.\n\n"
-    "   3. На диагностике Я подробно разберу Твоё текущее состояние, "
-    "что именно мешает Тебе жить так, как Ты хочешь, "
-    "и к каким изменениям Тебе необходимо прийти.\n\n"
-    "   4. После диагностики Я определю векторы Твоего развития. "
-    "Если Я увижу, что личный формат Тебе подходит, "
-    "и Ты будешь готова продолжить, Мы перейдём "
-    "к персональной Трансформации.\n\n"
-    "🌱 Формат: Если Ты - Девушка - Интроверт, которая заряжается энергией "
-    "в уединении, размышлениях и индивидуальной работе "
-    "над задачами лично с Наставником.\n\n"
-    "🤍 Выбирай путь, который подходит Тебе 🤍"
+    "   2. Ментальную тренировку\n\n"
+    "   3. Духовную практику\n\n"
+    "   4. Задание для применения в Своей жизни\n\n"
+    "После выполнения Ты делишься своими результатами, инсайтами и вопросами в комментариях к посту.\n\n"
+    "Разборы результатов участниц, ответы на вопросы, важные инсайты и направление твоего развития.\n\n"
+    "Так Ты проходишь Трансформацию через практику, обратную связь и ежедневную работу над собой.\n\n"
+    "🌱 Формат: Если Ты - Девушка - Экстраверт, которая заряжается не только от развития внутри себя, но и от взаимодействия с людьми, обсуждения мыслей, инсайтов и обмена энергией.\n\n"
+    "🤍 Эта Трансформация Для Тебя 🤍"
 )
 
 _chat_locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
@@ -89,15 +64,6 @@ def _invite_kb(url: str) -> dict:
 
 def _pay_url_kb(url: str, title: str = "Оплатить") -> dict:
     return {"inline_keyboard": [[{"text": title, "url": url}]]}
-
-
-def _paths_kb(personal_url: str, general_url: str) -> dict:
-    return {
-        "inline_keyboard": [
-            [{"text": "Персональная Трансформация", "url": personal_url}],
-            [{"text": "Групповая Трансформация", "url": general_url}],
-        ]
-    }
 
 
 def _normalize_phone(raw: str | None) -> str | None:
@@ -349,17 +315,6 @@ async def _handle_contact(
 
     async with _action_locks[(tg_id, "pay")]:
         async with SessionLocal() as session:
-            train = await latest_succeeded_for_telegram(session, tg_id, "vip_train")
-            if train:
-                await _bot_message(
-                    settings,
-                    chat_id,
-                    tg_id,
-                    "Ты уже в персональной Трансформации. Напишу тебе по деталям.",
-                    remove_keyboard=True,
-                )
-                return
-
             paid = await latest_succeeded_for_telegram(session, tg_id)
             if paid and paid.invites:
                 await _bot_message(
@@ -382,34 +337,23 @@ async def _handle_contact(
                 phone=phone,
             )
             await session.commit()
-            diag = await latest_succeeded_for_telegram(session, tg_id, "vip_diag")
-            personal_code = "vip_train" if diag else "vip_diag"
 
-        general = await _checkout_url(
+        from app.services.activity_log import log_show_phone
+        from app.services.behavior import mark_behavior_stage
+
+        result = await _checkout_url(
             settings,
             from_user,
             chat_id,
             phone=phone,
             product_code="program",
         )
-        personal = await _checkout_url(
-            settings,
-            from_user,
-            chat_id,
-            phone=phone,
-            product_code=personal_code,
-        )
-        if not general or not personal:
+        if not result:
             return
-
-        general_url, general_order, cid = general
-        personal_url, _, _ = personal
+        pay_url, order_id, cid = result
         if cid:
-            asyncio.create_task(_track_phone(settings, cid, general_order))
-        from app.services.activity_log import log_show_phone
-        from app.services.behavior import mark_behavior_stage
-
-        log_show_phone(telegram_user_id=tg_id, order_id=general_order)
+            asyncio.create_task(_track_phone(settings, cid, order_id))
+        log_show_phone(telegram_user_id=tg_id, order_id=order_id)
         async with SessionLocal() as session:
             await mark_behavior_stage(
                 session,
@@ -423,7 +367,8 @@ async def _handle_contact(
             chat_id,
             tg_id,
             AFTER_PHONE,
-            _paths_kb(personal_url, general_url),
+            _pay_url_kb(pay_url, "Оплатить 50 000 ₽"),
+            remove_keyboard=True,
         )
 
 
@@ -431,7 +376,6 @@ async def _handle_callback(settings: Settings, callback: dict[str, Any]) -> None
     from_user = callback.get("from") or {}
     message = callback.get("message") or {}
     chat_id = (message.get("chat") or {}).get("id")
-    data = (callback.get("data") or "").strip()
     cb_id = callback.get("id")
 
     # Сразу гасим «часики» на кнопке — не ждём оплату
@@ -446,64 +390,6 @@ async def _handle_callback(settings: Settings, callback: dict[str, Any]) -> None
 
     if not chat_id or not from_user.get("id"):
         return
-    if data == "vip":
-        await _handle_vip(settings, from_user, int(chat_id))
-
-
-async def _handle_vip(settings: Settings, from_user: dict, chat_id: int) -> None:
-    tg_id = from_user.get("id")
-    if not tg_id:
-        return
-    async with _action_locks[(int(tg_id), "vip")]:
-        async with SessionLocal() as session:
-            train = await latest_succeeded_for_telegram(session, tg_id, "vip_train")
-            if train:
-                await _bot_message(
-                    settings,
-                    chat_id,
-                    tg_id,
-                    "Ты уже в персональной Трансформации. Напишу тебе по деталям.",
-                )
-                return
-            diag = await latest_succeeded_for_telegram(session, tg_id, "vip_diag")
-            result = await session.execute(select(Client).where(Client.telegram_user_id == tg_id))
-            client = result.scalar_one_or_none()
-            phone = client.phone if client else None
-
-        if not phone:
-            await _bot_message(
-                settings,
-                chat_id,
-                tg_id,
-                "Сначала нажми «Показать номер».",
-                PHONE_KB,
-            )
-            return
-
-        if diag:
-            await _send_checkout(
-                settings,
-                from_user,
-                chat_id,
-                phone=phone,
-                product_code="vip_train",
-                intro="После диагностики — персональная Трансформация, 190 000 ₽.",
-                button="Оплатить 190 000 ₽",
-            )
-            return
-
-        await _send_checkout(
-            settings,
-            from_user,
-            chat_id,
-            phone=phone,
-            product_code="vip_diag",
-            intro=(
-                "Диагностический созвон — 60 минут, 10 000 ₽.\n"
-                "На нём выясняем, что тебе нужно. Затем — персональная Трансформация 190 000 ₽."
-            ),
-            button="Оплатить 10 000 ₽",
-        )
 
 
 async def _checkout_url(
@@ -571,41 +457,6 @@ async def _checkout_url(
             )
         return None
     return pay_url, order_id, cid
-
-
-async def _send_checkout(
-    settings: Settings,
-    from_user: dict,
-    chat_id: int,
-    *,
-    phone: str,
-    product_code: str,
-    intro: str,
-    button: str,
-    track_phone: bool = False,
-    remove_keyboard: bool = False,
-) -> bool:
-    result = await _checkout_url(
-        settings,
-        from_user,
-        chat_id,
-        phone=phone,
-        product_code=product_code,
-    )
-    if not result:
-        return False
-    pay_url, order_id, cid = result
-    if track_phone and cid:
-        asyncio.create_task(_track_phone(settings, cid, order_id))
-    await _bot_message(
-        settings,
-        chat_id,
-        from_user.get("id"),
-        intro,
-        _pay_url_kb(pay_url, button),
-        remove_keyboard=remove_keyboard,
-    )
-    return True
 
 
 async def _track_phone(settings: Settings, cid: str, order_id: str) -> None:
@@ -692,7 +543,7 @@ class PollingRunner:
         await close_shared_tg()
 
     async def _sync_loop(self) -> None:
-        """Без webhook: каждые 4с проверяем открытые платежи и шлём invite/VIP один раз."""
+        """Без webhook: каждые 4с проверяем открытые платежи и шлём invite один раз."""
         while not self._stopped.is_set():
             try:
                 await _sync_open_bg(self.settings)

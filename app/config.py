@@ -23,10 +23,6 @@ class Settings(BaseSettings):
 
     product_price_kopecks: int = 5_000_000
     product_title: str = "Групповая Трансформация · 14 дней"
-    vip_diag_price_kopecks: int = 1_000_000
-    vip_diag_title: str = "Персональная Трансформация · диагностический созвон, 60 мин"
-    vip_train_price_kopecks: int = 19_000_000
-    vip_train_title: str = "Персональная Трансформация · 14 дней"
 
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"
 
@@ -87,29 +83,14 @@ class Settings(BaseSettings):
         return f"{self.price_rubles:.2f}"
 
     def product(self, code: str = "program") -> dict[str, str | int]:
-        catalog: dict[str, dict[str, str | int]] = {
-            "program": {
-                "code": "program",
-                "id": "vs-program",
-                "title": self.product_title,
-                "kopecks": self.product_price_kopecks,
-            },
-            "vip_diag": {
-                "code": "vip_diag",
-                "id": "vs-vip-diag",
-                "title": self.vip_diag_title,
-                "kopecks": self.vip_diag_price_kopecks,
-            },
-            "vip_train": {
-                "code": "vip_train",
-                "id": "vs-vip-train",
-                "title": self.vip_train_title,
-                "kopecks": self.vip_train_price_kopecks,
-            },
-        }
-        if code not in catalog:
+        if code != "program":
             raise ValueError(f"Неизвестный продукт: {code}")
-        item = dict(catalog[code])
+        item: dict[str, str | int] = {
+            "code": "program",
+            "id": "vs-program",
+            "title": self.product_title,
+            "kopecks": self.product_price_kopecks,
+        }
         kopecks = int(item["kopecks"])
         item["rubles"] = kopecks / 100
         item["amount_value"] = f"{kopecks / 100:.2f}"
