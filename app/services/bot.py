@@ -201,7 +201,7 @@ async def _handle_start(
                     settings,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Обучение начинается {settings.course_start_date}.",
+                    f"Тебе уже открыт доступ. Трансформация начинается {settings.course_start_date}.",
                     _invite_kb(paid.invites[0].invite_url),
                 )
                 return
@@ -321,7 +321,7 @@ async def _handle_contact(
                     settings,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Обучение начинается {settings.course_start_date}.",
+                    f"Тебе уже открыт доступ. Трансформация начинается {settings.course_start_date}.",
                     _invite_kb(paid.invites[0].invite_url),
                     remove_keyboard=True,
                 )

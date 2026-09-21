@@ -53,8 +53,8 @@ class Settings(BaseSettings):
     site_dir: str = ""
     site_url: str = "https://life-energy-phi.vercel.app"
 
-    enrollment_deadline: str = "20 сентября"
-    course_start_date: str = "1 октября"
+    enrollment_deadline: str = "10 октября"
+    course_start_date: str = "20 октября"
 
     metrika_counter_id: int = 112323537
     metrika_mp_token: str = ""
