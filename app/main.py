@@ -528,11 +528,15 @@ if (SITE / "img").exists():
 
 @app.get("/")
 async def index(settings: Settings = Depends(get_settings)):
-    path = SITE / "index.html"
-    if path.exists():
-        return FileResponse(path)
-    # Лендинг на Vercel — корень API не должен отдавать 404 в логах.
-    return RedirectResponse(settings.site_link, status_code=302)
+    """Корень API — без редиректа на лендинг."""
+    return {
+        "ok": True,
+        "app": settings.app_name,
+        "env": settings.app_env,
+        "dashboard": "/admin/behavior",
+        "health": "/api/health",
+        "site": settings.site_link,
+    }
 
 
 @app.get("/success.html")
