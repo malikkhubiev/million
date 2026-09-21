@@ -15,6 +15,7 @@ from pydantic import BaseModel
 
 from app.config import Settings, get_settings
 from app.db import SessionLocal, get_session, init_db
+from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
@@ -62,6 +63,7 @@ def _ip_allowed(ip: str) -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+    install_secret_redaction()
     settings = get_settings()
     (Path(__file__).resolve().parent.parent / "data").mkdir(exist_ok=True)
     await init_db()

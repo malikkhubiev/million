@@ -20,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from app.config import get_settings
 from app.db import init_db
+from app.logging_utils import install_secret_redaction
 from app.services.bot import PollingRunner
 
 
@@ -28,6 +29,7 @@ async def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
+    install_secret_redaction()
     (ROOT / "data").mkdir(exist_ok=True)
 
     settings = get_settings()
