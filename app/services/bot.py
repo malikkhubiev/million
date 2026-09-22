@@ -11,7 +11,7 @@ from typing import Any
 from app.config import ROOT_DIR, Settings, get_settings
 from app.db import SessionLocal
 from app.services.behavior import mark_bot_started
-from app.services.dates import get_cohort_dates
+from app.services.dates import get_cohort_settings
 from app.services.metrika import metrika_cid_for, track_goal, track_pageview
 from app.services.payments import (
     create_checkout,
@@ -198,7 +198,7 @@ async def _handle_start(
         if tg_id:
             paid = await latest_succeeded_for_telegram(session, tg_id)
             if paid and paid.invites:
-                dates = await get_cohort_dates(session, settings)
+                dates = await get_cohort_settings(session, settings)
                 await _bot_message(
                     settings,
                     chat_id,
@@ -319,7 +319,7 @@ async def _handle_contact(
         async with SessionLocal() as session:
             paid = await latest_succeeded_for_telegram(session, tg_id)
             if paid and paid.invites:
-                dates = await get_cohort_dates(session, settings)
+                dates = await get_cohort_settings(session, settings)
                 await _bot_message(
                     settings,
                     chat_id,
@@ -353,7 +353,7 @@ async def _handle_contact(
         )
         if not result:
             return
-        pay_url, order_id, cid = result
+        pay_url, order_id, cid, pay_label = result
         if cid:
             asyncio.create_task(_track_phone(settings, cid, order_id))
         log_show_phone(telegram_user_id=tg_id, order_id=order_id)
@@ -370,7 +370,7 @@ async def _handle_contact(
             chat_id,
             tg_id,
             AFTER_PHONE,
-            _pay_url_kb(pay_url, "Оплатить 50 000 ₽"),
+            _pay_url_kb(pay_url, pay_label),
             remove_keyboard=True,
         )
 
@@ -403,7 +403,7 @@ async def _checkout_url(
     phone: str,
     product_code: str,
     notify: bool = True,
-) -> tuple[str, str, str | None] | None:
+) -> tuple[str, str, str | None, str] | None:
     tg_id = from_user.get("id")
     username = from_user.get("username")
     name = " ".join(x for x in [from_user.get("first_name"), from_user.get("last_name")] if x)
@@ -431,12 +431,19 @@ async def _checkout_url(
                 source="telegram",
                 product_code=product_code,
             )
+            offer = await get_cohort_settings(session, settings)
             cid = metrika_cid_for(
                 payment.client.metrika_client_id if payment.client else None,
                 tg_id,
             )
             pay_url = pay_url_for(settings, payment)
             order_id = payment.order_id
+            pay_label = offer.pay_button_label
+    except ValueError as exc:
+        logger.info("checkout отказ (%s): %s", product_code, exc)
+        if notify:
+            await _bot_message(settings, chat_id, tg_id, str(exc))
+        return None
     except Exception:
         logger.exception("checkout из бота (%s)", product_code)
         if notify:
@@ -459,7 +466,7 @@ async def _checkout_url(
                 PHONE_KB,
             )
         return None
-    return pay_url, order_id, cid
+    return pay_url, order_id, cid, pay_label
 
 
 async def _track_phone(settings: Settings, cid: str, order_id: str) -> None:

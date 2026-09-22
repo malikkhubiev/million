@@ -53,7 +53,7 @@ railway domain
 
 В кабинете ЮKassa → **Настройки уведомлений** URL:
 
-`https://million-production-87cd.up.railway.app/api/yookassa/webhook`
+`https://million.up.railway.app/api/yookassa/webhook`
 
 (или актуальный `APP_BASE_URL` + `/api/yookassa/webhook`).
 

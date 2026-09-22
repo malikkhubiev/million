@@ -18,7 +18,7 @@ from app.db import SessionLocal, get_session, init_db
 from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
-from app.services.dates import get_cohort_dates, set_cohort_dates
+from app.services.dates import get_cohort_settings, set_cohort_settings
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
     client_row,
@@ -132,6 +132,8 @@ class BehaviorSectionIn(BaseModel):
 class CohortDatesIn(BaseModel):
     enrollment_end: str
     transformation_start: str
+    price_rubles: int | str
+    seats_left: int | str
 
 
 class IntentIn(BaseModel):
@@ -413,9 +415,9 @@ async def dates_admin_page():
 
 @app.get("/api/dates")
 async def public_dates(session: AsyncSession = Depends(get_session)):
-    """Публичные даты набора — сайт, таймеры, тексты."""
-    dates = await get_cohort_dates(session)
-    return {"ok": True, **dates.as_public_dict()}
+    """Публичные настройки набора: даты, цена, места."""
+    offer = await get_cohort_settings(session)
+    return {"ok": True, **offer.as_public_dict()}
 
 
 @app.put("/api/dates")
@@ -423,16 +425,18 @@ async def update_dates(
     body: CohortDatesIn,
     session: AsyncSession = Depends(get_session),
 ):
-    """Админка: сохранить даты в формате ДД.ММ.ГГГГ."""
+    """Админка: даты (ДД.ММ.ГГГГ), цена в рублях, оставшиеся места."""
     try:
-        dates = await set_cohort_dates(
+        offer = await set_cohort_settings(
             session,
             enrollment_end=body.enrollment_end,
             transformation_start=body.transformation_start,
+            price_rubles=body.price_rubles,
+            seats_left=body.seats_left,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return {"ok": True, **dates.as_public_dict()}
+    return {"ok": True, **offer.as_public_dict()}
 
 
 @app.get("/api/clients")

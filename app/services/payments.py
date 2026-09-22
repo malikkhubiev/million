@@ -11,6 +11,7 @@ from sqlalchemy.orm import selectinload
 
 from app.config import Settings
 from app.models import Client, InviteLink, Payment, WebhookEvent
+from app.services.dates import consume_seat, get_cohort_settings
 from app.services.metrika import metrika_cid_for, track_goal, track_purchase
 from app.services.telegram import TelegramError
 from app.services.yookassa import YooKassaClient, YooKassaError
@@ -118,7 +119,12 @@ async def create_checkout(
     source: str = "telegram",
     product_code: str = "program",
 ) -> Payment:
+    offer = await get_cohort_settings(session, settings)
+    if offer.seats_left <= 0:
+        raise ValueError("Мест больше нет — набор закрыт")
+
     product = settings.product(product_code)
+    amount_value = offer.price_amount_value
     client = await get_or_create_client(
         session,
         name=name,
@@ -149,7 +155,7 @@ async def create_checkout(
         client_id=client.id,
         order_id=order_id,
         idempotence_key=idempotence_key,
-        amount_value=str(product["amount_value"]),
+        amount_value=amount_value,
         currency="RUB",
         status="pending",
         description=description,
@@ -177,7 +183,7 @@ async def create_checkout(
     async with YooKassaClient(settings) as yk:
         try:
             data = await yk.create_payment(
-                amount_value=str(product["amount_value"]),
+                amount_value=amount_value,
                 description=description,
                 return_url=return_url,
                 metadata=metadata,
@@ -423,12 +429,15 @@ async def apply_yookassa_payment_object(
 
     payment.raw_last_event = json.dumps(obj, ensure_ascii=False)
     status = obj.get("status") or payment.status
+    already_succeeded = payment.status == "succeeded" or payment.paid_at is not None
     payment.status = status
     if not payment.yookassa_payment_id and payment_id:
         payment.yookassa_payment_id = payment_id
 
     if status == "succeeded":
         payment.paid_at = payment.paid_at or datetime.now(timezone.utc)
+        if not already_succeeded:
+            await consume_seat(session)
         await session.commit()
         await fulfill_payment(session, settings, payment)
     elif status == "canceled":

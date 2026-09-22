@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Даты набора</title>
+<title>Настройки набора</title>
 <style>
 :root{
   --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
@@ -24,7 +24,7 @@ h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-b
 .admin-nav a:hover{color:var(--ink);border-color:rgba(26,23,20,.25)}
 .admin-nav a.active{background:#1a1714;color:#f7f1e8;border-color:#1a1714}
 .panel{
-  max-width:480px;background:var(--card);border:1px solid var(--line);
+  max-width:520px;background:var(--card);border:1px solid var(--line);
   border-radius:12px;padding:20px 18px 18px;
 }
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
@@ -33,6 +33,8 @@ h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-b
   font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
   background:#fff;font-size:16px;font-variant-numeric:tabular-nums;
 }
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:520px){.row{grid-template-columns:1fr}}
 .hint{font-size:12px;color:var(--muted);line-height:1.4}
 .preview{
   margin:16px 0 0;padding:12px 14px;border-radius:8px;
@@ -51,23 +53,34 @@ button.secondary{background:transparent;color:var(--ink)}
   <a href="/">Меню</a>
   <a href="/admin/behavior">Дашборд</a>
   <a href="/admin/payments">Клиенты</a>
-  <a class="active" href="/admin/dates">Даты</a>
+  <a class="active" href="/admin/dates">Настройки</a>
 </nav>
 
-<h1>Даты набора</h1>
-<p class="lead">Два значения в базе. От них подстраиваются тексты на сайте, таймер, сообщения в боте. Формат: <b>ДД.ММ.ГГГГ</b>.</p>
+<h1>Настройки набора</h1>
+<p class="lead">Даты, цена и места хранятся в базе. От них подстраиваются сайт, таймер и бот. При успешной оплате число мест уменьшается на 1.</p>
 
 <div class="panel">
   <form id="form">
     <div class="field">
       <label for="enrollment_end">Дата окончания набора</label>
       <input id="enrollment_end" name="enrollment_end" type="text" inputmode="numeric" placeholder="10.10.2026" autocomplete="off" required>
-      <span class="hint">Последний день приёма оплат. Таймер считает до 23:59 МСК этого дня.</span>
+      <span class="hint">Формат ДД.ММ.ГГГГ. Таймер до 23:59 МСК этого дня.</span>
     </div>
     <div class="field">
       <label for="transformation_start">Дата начала трансформации</label>
       <input id="transformation_start" name="transformation_start" type="text" inputmode="numeric" placeholder="20.10.2026" autocomplete="off" required>
-      <span class="hint">Старт публикации материалов / текст «трансформация начинается…» в боте.</span>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label for="price_rubles">Цена, ₽</label>
+        <input id="price_rubles" name="price_rubles" type="text" inputmode="numeric" placeholder="50000" autocomplete="off" required>
+        <span class="hint">Целое число, например 50000.</span>
+      </div>
+      <div class="field">
+        <label for="seats_left">Осталось мест</label>
+        <input id="seats_left" name="seats_left" type="text" inputmode="numeric" placeholder="20" autocomplete="off" required>
+        <span class="hint">Уменьшается при оплате. Для нового набора поставь 20.</span>
+      </div>
     </div>
     <div class="preview" id="preview">Загрузка…</div>
     <div class="actions">
@@ -90,8 +103,12 @@ function showMsg(t) { msg.hidden = !t; msg.textContent = t || ""; }
 function fill(data) {
   $("enrollment_end").value = data.enrollment_end || "";
   $("transformation_start").value = data.transformation_start || "";
+  $("price_rubles").value = data.price_rubles != null ? String(data.price_rubles) : "";
+  $("seats_left").value = data.seats_left != null ? String(data.seats_left) : "";
   $("preview").innerHTML =
     `<b>На сайте:</b> ${data.meta_line || "—"}<br>` +
+    `<b>Цена:</b> ${data.price_display || "—"} · <b>Места:</b> ${data.seats_left_label || "—"}<br>` +
+    `<b>Кнопка в боте:</b> ${data.pay_button_label || "—"}<br>` +
     `<b>Таймер до:</b> ${data.countdown_deadline || "—"}`;
 }
 
@@ -115,6 +132,8 @@ $("form").onsubmit = async (ev) => {
   const body = {
     enrollment_end: $("enrollment_end").value.trim(),
     transformation_start: $("transformation_start").value.trim(),
+    price_rubles: $("price_rubles").value.trim(),
+    seats_left: $("seats_left").value.trim(),
   };
   try {
     const r = await fetch("/api/dates", {
@@ -128,7 +147,7 @@ $("form").onsubmit = async (ev) => {
       throw new Error(typeof detail === "string" ? detail : (detail && JSON.stringify(detail)) || "ошибка сохранения");
     }
     fill(data);
-    showMsg("Сохранено. Сайт и бот подхватят новые даты.");
+    showMsg("Сохранено. Сайт и бот подхватят новые значения.");
   } catch (e) {
     showErr(String(e.message || e));
   }
