@@ -20,8 +20,10 @@ from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
+    client_row,
     get_payment_by_order,
     handle_yookassa_notification,
+    list_clients,
     list_payments,
     payment_row,
     resend_invite,
@@ -395,6 +397,20 @@ async def payments_admin_page():
     return FileResponse(path)
 
 
+@app.get("/api/clients")
+async def clients_list(
+    stage: str | None = None,
+    limit: int = 500,
+    session: AsyncSession = Depends(get_session),
+):
+    rows = await list_clients(session, stage=stage or None, limit=limit)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "clients": [client_row(c) for c in rows],
+    }
+
+
 @app.get("/api/payments")
 async def payments_list(
     status: str | None = None,
@@ -620,6 +636,7 @@ async def api_index(settings: Settings = Depends(get_settings)):
         "env": settings.app_env,
         "dashboard": "/admin/behavior",
         "payments": "/admin/payments",
+        "clients": "/admin/payments",
         "health": "/api/health",
         "site": settings.site_link,
         "yookassa_webhook": f"{settings.app_base_url.rstrip('/')}{settings.yookassa_webhook_path}",

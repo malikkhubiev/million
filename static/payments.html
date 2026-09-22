@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Оплаты</title>
+<title>Клиенты</title>
 <style>
 :root{
   --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
@@ -27,15 +27,13 @@ h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-b
 .nav{display:flex;gap:8px;flex-wrap:wrap}
 a.btn,button{font:inherit;padding:9px 14px;border:1px solid #1a1714;background:#1a1714;color:#f7f1e8;cursor:pointer;text-decoration:none;display:inline-block;border-radius:8px;font-size:13px}
 a.btn.secondary,button.secondary{background:transparent;color:var(--ink)}
-.hint{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:14px;font-size:13px;line-height:1.5}
-.hint code{background:rgba(26,23,20,.06);padding:1px 6px;border-radius:4px;font-size:12px;word-break:break-all}
 .filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;align-items:end}
 .filters label{display:flex;flex-direction:column;gap:3px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .filters select{font:inherit;padding:7px 9px;border:1px solid var(--line);background:#fff;border-radius:6px;font-size:13px}
 .err{color:var(--bad);margin-bottom:12px;font-size:13px}
 .ok{color:var(--good);margin-bottom:12px;font-size:13px}
 .wrap{overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
-table{width:100%;border-collapse:collapse;font-size:13px;min-width:780px}
+table{width:100%;border-collapse:collapse;font-size:13px;min-width:920px}
 th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;background:rgba(26,23,20,.03)}
 tr:last-child td{border-bottom:0}
@@ -44,6 +42,9 @@ tr:last-child td{border-bottom:0}
 .pill.ok{border-color:rgba(42,107,69,.35);background:rgba(42,107,69,.08);color:var(--good)}
 .pill.no{border-color:rgba(138,58,42,.3);background:rgba(138,58,42,.06);color:var(--bad)}
 .pill.wait{border-color:rgba(154,91,32,.3);background:rgba(154,91,32,.08);color:var(--warn)}
+.pill.muted{color:var(--muted)}
+a.write{color:var(--accent);font-weight:600;text-decoration:none}
+a.write:hover{text-decoration:underline}
 .actions{display:flex;gap:6px;flex-wrap:wrap}
 .actions button{padding:6px 10px;font-size:12px}
 .empty{padding:28px;text-align:center;color:var(--muted)}
@@ -53,12 +54,12 @@ tr:last-child td{border-bottom:0}
 <nav class="admin-nav" aria-label="Разделы">
   <a href="/">Меню</a>
   <a href="/admin/behavior">Дашборд</a>
-  <a class="active" href="/admin/payments">Оплаты</a>
+  <a class="active" href="/admin/payments">Клиенты</a>
 </nav>
 <div class="topbar">
   <div>
-    <h1>Оплаты</h1>
-    <p class="lead">Telegram id, username, дата оплаты, сумма, отправлена ли пригласительная ссылка.</p>
+    <h1>Клиенты</h1>
+    <p class="lead">Все, кто заходил в бота. Сначала оплатившие, затем с номером без оплаты, затем только /start. Ссылка «Написать» открывает чат в Telegram.</p>
   </div>
   <div class="nav">
     <button type="button" id="btnRefresh">Обновить</button>
@@ -67,13 +68,12 @@ tr:last-child td{border-bottom:0}
 </div>
 
 <div class="filters">
-  <label>Статус
-    <select id="status">
+  <label>Этап
+    <select id="stage">
       <option value="">все</option>
-      <option value="succeeded">succeeded</option>
-      <option value="pending">pending</option>
-      <option value="waiting_for_capture">waiting_for_capture</option>
-      <option value="canceled">canceled</option>
+      <option value="paid">оплатили</option>
+      <option value="phone">номер, без оплаты</option>
+      <option value="started">только /start</option>
     </select>
   </label>
 </div>
@@ -84,18 +84,20 @@ tr:last-child td{border-bottom:0}
   <table>
     <thead>
       <tr>
+        <th>Этап</th>
         <th>Telegram id</th>
         <th>Username</th>
+        <th>Написать</th>
+        <th>Телефон</th>
         <th>Оплата</th>
         <th>Сумма</th>
-        <th>Статус</th>
         <th>Инвайт</th>
         <th>Заказ</th>
         <th></th>
       </tr>
     </thead>
     <tbody id="tbody">
-      <tr><td colspan="8" class="empty">Загрузка…</td></tr>
+      <tr><td colspan="10" class="empty">Загрузка…</td></tr>
     </tbody>
   </table>
 </div>
@@ -116,47 +118,62 @@ function fmtDt(iso) {
 function showErr(t) { err.hidden = !t; err.textContent = t || ""; }
 function showMsg(t) { msg.hidden = !t; msg.textContent = t || ""; }
 
-function invitePill(p) {
-  if (p.invite_sent) return `<span class="pill ok">да · ${fmtDt(p.invite_sent_at)}</span>`;
-  if (p.status === "succeeded") return `<span class="pill no">нет</span>`;
+function invitePill(c) {
+  if (c.invite_sent) return `<span class="pill ok">да · ${fmtDt(c.invite_sent_at)}</span>`;
+  if (c.status === "succeeded") return `<span class="pill no">нет</span>`;
   return `<span class="pill wait">—</span>`;
 }
 
-function statusPill(s) {
-  if (s === "succeeded") return `<span class="pill ok">${s}</span>`;
-  if (s === "canceled") return `<span class="pill no">${s}</span>`;
-  return `<span class="pill wait">${s || "—"}</span>`;
+function stagePill(stage) {
+  if (stage === "paid") return `<span class="pill ok">оплатил</span>`;
+  if (stage === "phone") return `<span class="pill wait">номер</span>`;
+  return `<span class="pill muted">/start</span>`;
 }
 
-function rowHtml(p) {
-  const un = p.telegram_username ? `@${p.telegram_username}` : "—";
-  const syncBtn = p.yookassa_payment_id
-    ? `<button type="button" class="secondary" data-sync="${p.order_id}">Sync</button>` : "";
-  const resendBtn = p.status === "succeeded"
-    ? `<button type="button" data-resend="${p.order_id}">Инвайт</button>` : "";
+function statusAmount(c) {
+  if (!c.amount) return "—";
+  const st = c.status === "succeeded"
+    ? `<span class="pill ok">succeeded</span>`
+    : c.status === "canceled"
+      ? `<span class="pill no">${c.status}</span>`
+      : `<span class="pill wait">${c.status || "—"}</span>`;
+  return `${c.amount} ${c.currency || "RUB"} · ${st}`;
+}
+
+function rowHtml(c) {
+  const un = c.telegram_username ? `@${c.telegram_username}` : "—";
+  const write = c.telegram_url
+    ? `<a class="write" href="${c.telegram_url}" target="_blank" rel="noopener">Написать</a>`
+    : "—";
+  const syncBtn = c.yookassa_payment_id && c.order_id
+    ? `<button type="button" class="secondary" data-sync="${c.order_id}">Sync</button>` : "";
+  const resendBtn = c.status === "succeeded" && c.order_id
+    ? `<button type="button" data-resend="${c.order_id}">Инвайт</button>` : "";
   return `<tr>
-    <td class="mono">${p.telegram_user_id ?? "—"}</td>
+    <td>${stagePill(c.stage)}</td>
+    <td class="mono">${c.telegram_user_id ?? "—"}</td>
     <td>${un}</td>
-    <td class="mono">${fmtDt(p.paid_at || p.created_at)}</td>
-    <td class="mono">${p.amount} ${p.currency || "RUB"}</td>
-    <td>${statusPill(p.status)}</td>
-    <td>${invitePill(p)}</td>
-    <td class="mono">${p.order_id}</td>
+    <td>${write}</td>
+    <td class="mono">${c.phone || "—"}</td>
+    <td class="mono">${fmtDt(c.paid_at || c.payment_created_at)}</td>
+    <td>${statusAmount(c)}</td>
+    <td>${invitePill(c)}</td>
+    <td class="mono">${c.order_id || "—"}</td>
     <td><div class="actions">${syncBtn}${resendBtn}</div></td>
   </tr>`;
 }
 
 async function load() {
   showErr("");
-  const st = $("status").value;
-  const q = new URLSearchParams({ limit: "200" });
-  if (st) q.set("status", st);
-  const r = await fetch("/api/payments?" + q.toString());
+  const st = $("stage").value;
+  const q = new URLSearchParams({ limit: "500" });
+  if (st) q.set("stage", st);
+  const r = await fetch("/api/clients?" + q.toString());
   if (!r.ok) throw new Error("HTTP " + r.status);
   const data = await r.json();
-  const rows = data.payments || [];
+  const rows = data.clients || [];
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="8" class="empty">Пока нет оплат</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">Пока нет клиентов из бота</td></tr>`;
     return;
   }
   tbody.innerHTML = rows.map(rowHtml).join("");
@@ -164,22 +181,15 @@ async function load() {
 
 async function boot() {
   try {
-    const h = await fetch("/api");
-    if (h.ok) {
-      const j = await h.json();
-      if (j.yookassa_webhook) $("webhookUrl").textContent = j.yookassa_webhook;
-    }
-  } catch (_) {}
-  try {
     await load();
   } catch (e) {
     showErr(String(e.message || e));
-    tbody.innerHTML = `<tr><td colspan="8" class="empty">Ошибка загрузки</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="10" class="empty">Ошибка загрузки</td></tr>`;
   }
 }
 
 $("btnRefresh").onclick = () => load().catch((e) => showErr(String(e.message || e)));
-$("status").onchange = () => load().catch((e) => showErr(String(e.message || e)));
+$("stage").onchange = () => load().catch((e) => showErr(String(e.message || e)));
 $("btnSyncOpen").onclick = async () => {
   showMsg(""); showErr("");
   try {

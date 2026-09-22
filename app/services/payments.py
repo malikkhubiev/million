@@ -526,6 +526,92 @@ async def list_payments(
     return list(result.scalars().all())
 
 
+def _client_funnel_rank(client: Client) -> int:
+    """0 — оплатил, 1 — номер без оплаты, 2 — только /start."""
+    payments = list(client.payments or [])
+    if any(p.status == "succeeded" for p in payments):
+        return 0
+    if client.phone:
+        return 1
+    return 2
+
+
+def _best_payment(client: Client) -> Payment | None:
+    payments = list(client.payments or [])
+    if not payments:
+        return None
+    succeeded = [p for p in payments if p.status == "succeeded"]
+    pool = succeeded or payments
+    return max(pool, key=lambda p: (p.paid_at or p.created_at or datetime.min.replace(tzinfo=timezone.utc), p.id))
+
+
+def telegram_write_url(*, telegram_user_id: int | None, telegram_username: str | None) -> str | None:
+    if telegram_username:
+        return f"https://t.me/{telegram_username.lstrip('@')}"
+    if telegram_user_id:
+        return f"tg://user?id={telegram_user_id}"
+    return None
+
+
+def client_row(client: Client) -> dict:
+    payment = _best_payment(client)
+    invite = payment.invites[0] if payment and payment.invites else None
+    rank = _client_funnel_rank(client)
+    stage = ("paid", "phone", "started")[rank]
+    return {
+        "id": client.id,
+        "name": client.name or "",
+        "telegram_user_id": client.telegram_user_id,
+        "telegram_username": client.telegram_username,
+        "telegram_url": telegram_write_url(
+            telegram_user_id=client.telegram_user_id,
+            telegram_username=client.telegram_username,
+        ),
+        "phone": client.phone,
+        "stage": stage,
+        "created_at": _iso(client.created_at),
+        "updated_at": _iso(client.updated_at),
+        "order_id": payment.order_id if payment else None,
+        "amount": payment.amount_value if payment else None,
+        "currency": payment.currency if payment else None,
+        "status": payment.status if payment else None,
+        "paid_at": _iso(payment.paid_at) if payment else None,
+        "payment_created_at": _iso(payment.created_at) if payment else None,
+        "invite_sent": bool(payment.invite_sent_at) if payment else False,
+        "invite_sent_at": _iso(payment.invite_sent_at) if payment else None,
+        "invite_url": invite.invite_url if invite else None,
+        "yookassa_payment_id": payment.yookassa_payment_id if payment else None,
+    }
+
+
+async def list_clients(
+    session: AsyncSession,
+    *,
+    stage: str | None = None,
+    limit: int = 500,
+) -> list[Client]:
+    """Клиенты, бывшие в боте (есть telegram_user_id), с сортировкой по воронке."""
+    result = await session.execute(
+        select(Client)
+        .options(selectinload(Client.payments).selectinload(Payment.invites))
+        .where(Client.telegram_user_id.is_not(None))
+        .order_by(Client.id.desc())
+        .limit(max(1, min(limit, 2000)))
+    )
+    clients = list(result.scalars().unique().all())
+
+    def sort_key(c: Client):
+        rank = _client_funnel_rank(c)
+        ts = c.updated_at or c.created_at or datetime.min.replace(tzinfo=timezone.utc)
+        return (rank, -ts.timestamp() if hasattr(ts, "timestamp") else 0, -c.id)
+
+    clients.sort(key=sort_key)
+    if stage in ("paid", "phone", "started"):
+        want = {"paid": 0, "phone": 1, "started": 2}[stage]
+        clients = [c for c in clients if _client_funnel_rank(c) == want]
+    return clients
+
+
 async def resend_invite(session: AsyncSession, settings: Settings, payment: Payment) -> Payment:
     """Повторно отправить инвайт (сбрасывает invite_sent_at, если ссылка уже есть)."""
     if payment.status != "succeeded":
