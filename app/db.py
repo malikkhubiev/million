@@ -158,6 +158,10 @@ async def init_db() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         await conn.run_sync(_migrate_schema)
+    from app.services.dates import ensure_defaults
+
+    async with SessionLocal() as session:
+        await ensure_defaults(session, settings)
 
 
 async def get_session() -> AsyncGenerator[AsyncSession, None]:

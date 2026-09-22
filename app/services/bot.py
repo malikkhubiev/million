@@ -11,6 +11,7 @@ from typing import Any
 from app.config import ROOT_DIR, Settings, get_settings
 from app.db import SessionLocal
 from app.services.behavior import mark_bot_started
+from app.services.dates import get_cohort_dates
 from app.services.metrika import metrika_cid_for, track_goal, track_pageview
 from app.services.payments import (
     create_checkout,
@@ -197,11 +198,12 @@ async def _handle_start(
         if tg_id:
             paid = await latest_succeeded_for_telegram(session, tg_id)
             if paid and paid.invites:
+                dates = await get_cohort_dates(session, settings)
                 await _bot_message(
                     settings,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Трансформация начинается {settings.course_start_date}.",
+                    f"Тебе уже открыт доступ. Трансформация начинается {dates.transformation_start_display}.",
                     _invite_kb(paid.invites[0].invite_url),
                 )
                 return
@@ -317,11 +319,12 @@ async def _handle_contact(
         async with SessionLocal() as session:
             paid = await latest_succeeded_for_telegram(session, tg_id)
             if paid and paid.invites:
+                dates = await get_cohort_dates(session, settings)
                 await _bot_message(
                     settings,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Трансформация начинается {settings.course_start_date}.",
+                    f"Тебе уже открыт доступ. Трансформация начинается {dates.transformation_start_display}.",
                     _invite_kb(paid.invites[0].invite_url),
                     remove_keyboard=True,
                 )

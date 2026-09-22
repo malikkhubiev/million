@@ -18,6 +18,7 @@ from app.db import SessionLocal, get_session, init_db
 from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
+from app.services.dates import get_cohort_dates, set_cohort_dates
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
     client_row,
@@ -126,6 +127,11 @@ class BehaviorSectionIn(BaseModel):
     reached: int = 0
     time_to_ms: int | None = None
     dwell_ms: int = 0
+
+
+class CohortDatesIn(BaseModel):
+    enrollment_end: str
+    transformation_start: str
 
 
 class IntentIn(BaseModel):
@@ -397,6 +403,38 @@ async def payments_admin_page():
     return FileResponse(path)
 
 
+@app.get("/admin/dates")
+async def dates_admin_page():
+    path = Path(__file__).resolve().parent.parent / "static" / "dates.html"
+    if not path.exists():
+        raise HTTPException(404, "dates.html not found")
+    return FileResponse(path)
+
+
+@app.get("/api/dates")
+async def public_dates(session: AsyncSession = Depends(get_session)):
+    """Публичные даты набора — сайт, таймеры, тексты."""
+    dates = await get_cohort_dates(session)
+    return {"ok": True, **dates.as_public_dict()}
+
+
+@app.put("/api/dates")
+async def update_dates(
+    body: CohortDatesIn,
+    session: AsyncSession = Depends(get_session),
+):
+    """Админка: сохранить даты в формате ДД.ММ.ГГГГ."""
+    try:
+        dates = await set_cohort_dates(
+            session,
+            enrollment_end=body.enrollment_end,
+            transformation_start=body.transformation_start,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, **dates.as_public_dict()}
+
+
 @app.get("/api/clients")
 async def clients_list(
     stage: str | None = None,
@@ -636,8 +674,10 @@ async def api_index(settings: Settings = Depends(get_settings)):
         "env": settings.app_env,
         "dashboard": "/admin/behavior",
         "payments": "/admin/payments",
+        "dates": "/admin/dates",
         "clients": "/admin/payments",
         "health": "/api/health",
+        "public_dates": "/api/dates",
         "site": settings.site_link,
         "yookassa_webhook": f"{settings.app_base_url.rstrip('/')}{settings.yookassa_webhook_path}",
     }

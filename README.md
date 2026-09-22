@@ -51,6 +51,6 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
    createChatInviteLink → ссылка в канал
 ```
 
-Даты набора и старта задаются переменными `ENROLLMENT_DEADLINE` и `COURSE_START_DATE`.
+Даты набора и старта хранятся в БД (`app_settings`) и правятся в админке `/admin/dates` в формате `ДД.ММ.ГГГГ`. Публичный API: `GET /api/dates` (сайт подтягивает тексты и таймер). Seed при первом запуске: `ENROLLMENT_DEADLINE_ISO` / `COURSE_START_DATE_ISO`.
 
 Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл секций: `headline_*` / `section_*`. Дашборд: `https://<railway>/admin/behavior` · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM — в `website/README.md`. Деплой API: [RAILWAY.md](./RAILWAY.md).
