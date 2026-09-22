@@ -192,7 +192,13 @@ async def upsert_behavior(
     newly_reached.sort(key=lambda k: order_idx.get(k, 999))
 
     await session.commit()
-    await session.refresh(visit)
+    # После commit relationship expired — подгружаем sections без lazy load (async).
+    result = await session.execute(
+        select(BehaviorVisit)
+        .where(BehaviorVisit.id == visit.id)
+        .options(selectinload(BehaviorVisit.sections))
+    )
+    visit = result.scalar_one()
     return visit, newly_reached
 
 
