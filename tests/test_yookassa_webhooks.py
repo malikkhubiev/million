@@ -19,7 +19,7 @@ def _yk_payment_payload(
     order_id: str,
     status: str = "succeeded",
     telegram_user_id: int = 42,
-    amount: str = "50000.00",
+    amount: str = "65000.00",
 ) -> dict:
     return {
         "event": f"payment.{status}" if status != "waiting_for_capture" else "payment.waiting_for_capture",
@@ -64,7 +64,7 @@ async def test_create_checkout_calls_yookassa(session, settings):
     assert payment.yookassa_payment_id == "yk-pay-1"
     assert payment.status == "pending"
     assert payment.confirmation_url == "https://yookassa.ru/checkout/test"
-    assert payment.amount_value == "50000.00"
+    assert payment.amount_value == "65000.00"
     inst.create_payment.assert_awaited_once()
     call_kw = inst.create_payment.await_args.kwargs
     assert call_kw["metadata"]["telegram_user_id"] == "1001"
@@ -83,7 +83,7 @@ async def test_yookassa_webhook_succeeds_and_consumes_seat(client, session, sett
         order_id="VS-TESTORDER1",
         idempotence_key="idem-1",
         yookassa_payment_id="yk-abc",
-        amount_value="50000.00",
+        amount_value="65000.00",
         currency="RUB",
         status="pending",
         description="test",
@@ -144,7 +144,7 @@ async def test_yookassa_webhook_idempotent(session, settings):
             order_id="VS-DUP0000001",
             idempotence_key="idem-dup",
             yookassa_payment_id="yk-dup",
-            amount_value="50000.00",
+            amount_value="65000.00",
             currency="RUB",
             status="pending",
             description="dup",
@@ -178,7 +178,7 @@ async def test_yookassa_webhook_canceled(session, settings):
             order_id="VS-CANCEL0001",
             idempotence_key="idem-cancel",
             yookassa_payment_id="yk-cancel",
-            amount_value="50000.00",
+            amount_value="65000.00",
             currency="RUB",
             status="pending",
             description="cancel",
@@ -230,7 +230,7 @@ async def test_order_status_endpoint(client, session):
             order_id="VS-STATUS0001",
             idempotence_key="idem-st",
             yookassa_payment_id="yk-st",
-            amount_value="50000.00",
+            amount_value="65000.00",
             currency="RUB",
             status="pending",
             description="st",
@@ -265,7 +265,7 @@ async def test_pay_redirect(client, session):
             client_id=c.id,
             order_id="VS-PAY0000001",
             idempotence_key="idem-pay",
-            amount_value="50000.00",
+            amount_value="65000.00",
             currency="RUB",
             status="pending",
             description="pay",
@@ -290,7 +290,7 @@ async def test_clients_and_payments_list(client, session):
             client_id=c.id,
             order_id="VS-LIST000001",
             idempotence_key="idem-list",
-            amount_value="50000.00",
+            amount_value="65000.00",
             currency="RUB",
             status="pending",
             description="list",

@@ -38,7 +38,7 @@
 | `bot_started` | Человек нажал /start в боте | 150 ₽ |
 | `show_phone` | Нажал «Показать номер» в боте | 1 000 ₽ |
 | `payment_started` | Нажал «Оплатить» в боте | 15 000 ₽ |
-| `payment_success` | Успешная оплата ЮKassa | 50 000 ₽ |
+| `payment_success` | Успешная оплата ЮKassa | 65 000 ₽ |
 
 Оптимизация кампании: в итоге на `payment_success`. Пока мало оплат — временно `payment_started` или `show_phone`.
 

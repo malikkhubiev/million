@@ -35,7 +35,7 @@ async def test_dates_get_and_put(client, session):
     assert r.status_code == 200
     body = r.json()
     assert body["ok"] is True
-    assert body["price_rubles"] == 50_000
+    assert body["price_rubles"] == 65_000
     assert body["seats_left"] == 20
     assert "countdown_deadline" in body
     assert "pay_button_label" in body
@@ -68,7 +68,7 @@ async def test_dates_put_rejects_bad_order(client):
         json={
             "enrollment_end": "01.12.2026",
             "transformation_start": "15.11.2026",
-            "price_rubles": 50000,
+            "price_rubles": 65000,
             "seats_left": 10,
         },
     )

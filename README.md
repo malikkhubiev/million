@@ -2,7 +2,7 @@
 
 FastAPI, ЮKassa, Telegram-бот, БД. Сайт — отдельно: [life_energy](https://github.com/malikkhubiev/life_energy).
 
-Клиент на сайте нажимает одну кнопку → Telegram (`?start=site`). Бот просит номер телефона, создаёт оплату в ЮKassa (50 000 ₽) и после `payment.succeeded` сам присылает пригласительную в закрытый канал.
+Клиент на сайте нажимает одну кнопку → Telegram (`?start=site`). Бот просит номер телефона, создаёт оплату в ЮKassa (65 000 ₽) и после `payment.succeeded` сам присылает пригласительную в закрытый канал.
 
 Для отладки оплат используйте тестовый магазин ЮKassa (`test_…` ключ).
 
@@ -46,11 +46,11 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
          ↓
    «Показать номер» (request_contact)
          ↓ phone → metadata ЮKassa
-   кнопка «Оплатить 50 000 ₽»
+   кнопка «Оплатить 65 000 ₽»
          ↓ webhook payment.succeeded
    createChatInviteLink → ссылка в канал
 ```
 
 Даты, цена и оставшиеся места хранятся в БД (`app_settings`) и правятся в админке `/admin/dates`. Публичный API: `GET /api/dates` (сайт подтягивает тексты, таймер, цену и места). При `payment.succeeded` число мест уменьшается на 1. Seed при первом запуске: `ENROLLMENT_DEADLINE_ISO` / `COURSE_START_DATE_ISO` / `PRODUCT_PRICE_KOPECKS`.
 
-Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (50000). Доскролл секций: `headline_*` / `section_*`. Дашборд: `https://<railway>/admin/behavior` · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM — в `website/README.md`. Деплой API: [RAILWAY.md](./RAILWAY.md).
+Яндекс.Метрика `112323537`. Цели Директа: `view_offer` (50), `tg_click` (30), `bot_started` (150), `show_phone` (1000), `payment_started` (15000), `payment_success` (65000). Доскролл секций: `headline_*` / `section_*`. Дашборд: `https://<railway>/admin/behavior` · JSON `/api/behavior/stats`. Сайт: https://life-energy-phi.vercel.app/ · UTM — в `website/README.md`. Деплой API: [RAILWAY.md](./RAILWAY.md).

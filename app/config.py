@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     secret_key: str = "dev-secret-change-me"
     cors_origins: str = "*"
 
-    product_price_kopecks: int = 5_000_000
+    product_price_kopecks: int = 6_500_000
     product_title: str = "Групповая Трансформация · 14 дней"
 
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"

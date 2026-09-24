@@ -20,7 +20,7 @@ os.environ["TELEGRAM_WEBHOOK_SECRET"] = "test-tg-secret"
 os.environ["YOOKASSA_SHOP_ID"] = "test_shop"
 os.environ["YOOKASSA_SECRET_KEY"] = "test_secret"
 os.environ["SECRET_KEY"] = "test-secret-key"
-os.environ["PRODUCT_PRICE_KOPECKS"] = "5000000"
+os.environ["PRODUCT_PRICE_KOPECKS"] = "6500000"
 os.environ["METRIKA_MP_TOKEN"] = ""
 os.environ["CORS_ORIGINS"] = "*"
 

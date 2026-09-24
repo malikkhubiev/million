@@ -14,7 +14,7 @@ GOAL_VALUES = {
     "bot_started": 150,
     "show_phone": 1000,
     "payment_started": 15000,
-    "payment_success": 50000,
+    "payment_success": 65000,
     "payment_canceled": 0,
 }
 
@@ -100,7 +100,7 @@ async def track_purchase(
     *,
     cid: str,
     order_id: str,
-    amount: float | str = 50000,
+    amount: float | str = 65000,
     product_id: str = "vs-program",
     product_name: str | None = None,
 ) -> None:
@@ -124,7 +124,7 @@ async def track_add_to_cart(
     settings: Settings,
     *,
     cid: str,
-    amount: float | str = 50000,
+    amount: float | str = 65000,
     product_id: str = "vs-program",
     product_name: str | None = None,
 ) -> None:

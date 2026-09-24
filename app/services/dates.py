@@ -38,7 +38,7 @@ MONTHS_RU = (
 
 DEFAULT_ENROLLMENT_END = date(2026, 10, 10)
 DEFAULT_TRANSFORM_START = date(2026, 10, 20)
-DEFAULT_PRICE_RUBLES = 50_000
+DEFAULT_PRICE_RUBLES = 65_000
 DEFAULT_SEATS_LEFT = 20
 
 
@@ -178,7 +178,7 @@ def parse_admin_date(raw: str, *, field: str) -> date:
 
 def parse_price_rubles(raw: object, *, field: str = "Цена") -> int:
     if isinstance(raw, bool):
-        raise ValueError(f"{field}: укажи целое число рублей, например 50000")
+        raise ValueError(f"{field}: укажи целое число рублей, например 65000")
     if isinstance(raw, int):
         value = raw
     elif isinstance(raw, float):
@@ -189,7 +189,7 @@ def parse_price_rubles(raw: object, *, field: str = "Цена") -> int:
         text = str(raw or "").strip().replace("\u00a0", " ")
         text = re.sub(r"[^\d]", "", text)
         if not text:
-            raise ValueError(f"{field}: укажи целое число рублей, например 50000")
+            raise ValueError(f"{field}: укажи целое число рублей, например 65000")
         value = int(text)
     if value < 1:
         raise ValueError(f"{field}: должна быть больше 0")
