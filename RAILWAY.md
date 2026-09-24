@@ -57,8 +57,6 @@ railway domain
 
 (или актуальный `APP_BASE_URL` + `/api/yookassa/webhook`).
 
-**Не оставляй** старый Render вроде `https://aim-pay-bot-server-4c57.onrender.com/...` — иначе оплата пройдёт, а инвайт в боте не отправится.
-
 События: `payment.succeeded`, `payment.canceled`, при двухстадийных платежах ещё `payment.waiting_for_capture`.
 
 Дашборд оплат: `https://твой-домен.up.railway.app/admin/payments`  
