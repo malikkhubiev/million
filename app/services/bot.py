@@ -567,11 +567,50 @@ async def _sync_open_bg(settings: Settings) -> None:
         logger.exception("sync_open_payments")
 
 
+class YooKassaSyncRunner:
+    """Периодически подтягивает pending из ЮKassa — страховка, если webhook не дошёл."""
+
+    def __init__(self, settings: Settings | None = None, *, interval_sec: float = 8.0):
+        self.settings = settings or get_settings()
+        self.interval_sec = interval_sec
+        self._task: asyncio.Task | None = None
+        self._stopped = asyncio.Event()
+
+    async def start(self) -> None:
+        if self._task and not self._task.done():
+            return
+        self._stopped.clear()
+        self._task = asyncio.create_task(self._loop(), name="yookassa-sync")
+
+    async def stop(self) -> None:
+        self._stopped.set()
+        if self._task:
+            self._task.cancel()
+            try:
+                await self._task
+            except asyncio.CancelledError:
+                pass
+        self._task = None
+
+    async def _loop(self) -> None:
+        logger.info("ЮKassa sync loop запущен (каждые %.0fс)", self.interval_sec)
+        while not self._stopped.is_set():
+            try:
+                await _sync_open_bg(self.settings)
+            except Exception:
+                logger.exception("yookassa sync loop")
+            try:
+                await asyncio.wait_for(self._stopped.wait(), timeout=self.interval_sec)
+            except asyncio.TimeoutError:
+                pass
+        logger.info("ЮKassa sync loop остановлен")
+
+
 class PollingRunner:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or get_settings()
         self._tasks: list[asyncio.Task] = []
-        self._sync_task: asyncio.Task | None = None
+        self._sync = YooKassaSyncRunner(self.settings, interval_sec=4.0)
         self._stopped = asyncio.Event()
 
     async def start(self) -> None:
@@ -583,31 +622,19 @@ class PollingRunner:
             self._tasks.append(
                 asyncio.create_task(self._loop(bot), name=f"telegram-polling-{bot.key}")
             )
-        self._sync_task = asyncio.create_task(self._sync_loop(), name="yookassa-sync")
+        await self._sync.start()
 
     async def stop(self) -> None:
         self._stopped.set()
-        for task in [*self._tasks, self._sync_task]:
-            if task:
-                task.cancel()
-                try:
-                    await task
-                except asyncio.CancelledError:
-                    pass
-        self._tasks = []
-        self._sync_task = None
-        await close_shared_tg()
-
-    async def _sync_loop(self) -> None:
-        while not self._stopped.is_set():
+        for task in self._tasks:
+            task.cancel()
             try:
-                await _sync_open_bg(self.settings)
-            except Exception:
-                logger.exception("yookassa sync loop")
-            try:
-                await asyncio.wait_for(self._stopped.wait(), timeout=4.0)
-            except asyncio.TimeoutError:
+                await task
+            except asyncio.CancelledError:
                 pass
+        self._tasks = []
+        await self._sync.stop()
+        await close_shared_tg()
 
     async def _loop(self, bot: BotSpec) -> None:
         if not bot.has_token:

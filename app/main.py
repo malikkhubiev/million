@@ -17,7 +17,7 @@ from app.config import Settings, get_settings
 from app.db import SessionLocal, get_session, init_db
 from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
-from app.services.bot import PollingRunner, handle_bot_update
+from app.services.bot import PollingRunner, YooKassaSyncRunner, handle_bot_update
 from app.services.bot_copy import get_all_bot_copy, set_bot_copy
 from app.services.dates import get_cohort_settings, set_cohort_settings
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
@@ -38,6 +38,7 @@ from app.services.yookassa import YOOKASSA_WEBHOOK_NETWORKS
 
 logger = logging.getLogger(__name__)
 polling_runner = PollingRunner()
+yookassa_sync_runner = YooKassaSyncRunner(interval_sec=8.0)
 
 
 def _client_ip(request: Request) -> str:
@@ -95,7 +96,11 @@ async def lifespan(app: FastAPI):
                     logger.info("Telegram webhook (%s): %s", bot.key, url)
                 except Exception:
                     logger.exception("Не удалось установить Telegram webhook (%s)", bot.key)
+        # На проде webhook ЮKassa иногда не доходит — подтягиваем pending сами.
+        if settings.is_yookassa_configured:
+            await yookassa_sync_runner.start()
     yield
+    await yookassa_sync_runner.stop()
     await polling_runner.stop()
 
 

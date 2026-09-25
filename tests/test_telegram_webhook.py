@@ -36,7 +36,7 @@ async def test_telegram_english_webhook_ok(client):
         r = await client.post(
             "/api/telegram/english/webhook",
             json={"update_id": 3, "message": {"text": "/start"}},
-            headers={"X-Telegram-Bot-Api-Secret-Token": "change-me-english"},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "test-tg-secret-english"},
         )
     assert r.status_code == 200
     assert r.json()["ok"] is True
