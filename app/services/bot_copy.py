@@ -140,6 +140,12 @@ async def set_bot_copy(
     return await get_bot_copy(session, bot)
 
 
+async def reset_bot_copy_to_defaults(session: AsyncSession, bot: str) -> BotCopy:
+    """Перезаписать тексты бота из texts.py (DEFAULTS)."""
+    defaults = _defaults_for(bot).as_dict()
+    return await set_bot_copy(session, bot, **defaults)
+
+
 def format_already_access(template: str, *, date: str | None = None) -> str:
     text = template or ""
     if "{date}" in text:

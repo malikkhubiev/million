@@ -18,7 +18,7 @@ from app.db import SessionLocal, get_session, init_db
 from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, YooKassaSyncRunner, handle_bot_update
-from app.services.bot_copy import get_all_bot_copy, set_bot_copy
+from app.services.bot_copy import get_all_bot_copy, reset_bot_copy_to_defaults, set_bot_copy
 from app.services.dates import get_cohort_settings, set_cohort_settings
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
@@ -478,6 +478,22 @@ async def bot_texts_update(
             invite_after=body.invite_after,
             invite_button=body.invite_button,
         )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, "bot": copy.as_dict()}
+
+
+@app.post("/api/bot-texts/{bot_key}/reset")
+async def bot_texts_reset(
+    bot_key: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Сбросить тексты бота к дефолтам из texts.py."""
+    key = (bot_key or "").strip().lower()
+    if key not in {"life", "english"}:
+        raise HTTPException(404, "Бот: life или english")
+    try:
+        copy = await reset_bot_copy_to_defaults(session, key)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return {"ok": True, "bot": copy.as_dict()}

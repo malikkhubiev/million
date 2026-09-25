@@ -100,6 +100,7 @@ button.secondary{font:inherit;padding:9px 14px;border:1px solid var(--line);back
     <div class="actions">
       <button type="submit" class="primary">Сохранить</button>
       <button type="button" class="secondary" id="btnReload">Отменить</button>
+      <button type="button" class="secondary" id="btnReset">Из texts.py</button>
     </div>
     <div class="err" id="err" hidden></div>
     <div class="ok" id="msg" hidden></div>
@@ -148,6 +149,21 @@ async function load() {
 $("tabLife").onclick = () => setTab("life");
 $("tabEnglish").onclick = () => setTab("english");
 $("btnReload").onclick = () => { showMsg(""); showErr(""); load().catch((e) => showErr(String(e))); };
+$("btnReset").onclick = async () => {
+  showErr("");
+  showMsg("");
+  if (!confirm("Заменить тексты этого бота дефолтами из texts.py?")) return;
+  try {
+    const r = await fetch("/api/bot-texts/" + currentBot + "/reset", { method: "POST" });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || ("HTTP " + r.status));
+    cache[currentBot] = data.bot;
+    fill(cache[currentBot]);
+    showMsg("Загружено из texts.py и сохранено в БД");
+  } catch (ex) {
+    showErr(String(ex.message || ex));
+  }
+};
 
 $("form").onsubmit = async (e) => {
   e.preventDefault();
