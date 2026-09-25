@@ -8,9 +8,18 @@ import time
 from collections import defaultdict
 from typing import Any
 
-from app.config import ROOT_DIR, Settings, get_settings
+from app.config import (
+    BOT_ENGLISH,
+    BOT_LIFE,
+    PRODUCT_PROGRAM,
+    ROOT_DIR,
+    BotSpec,
+    Settings,
+    get_settings,
+)
 from app.db import SessionLocal
 from app.services.behavior import mark_bot_started
+from app.services.bot_copy import format_already_access, get_bot_copy
 from app.services.dates import get_cohort_settings
 from app.services.metrika import metrika_cid_for, track_goal, track_pageview
 from app.services.payments import (
@@ -25,11 +34,6 @@ from app.services.tracking import apply_tracking_to_client, consume_intent
 
 logger = logging.getLogger(__name__)
 
-WELCOME = (
-    "Ты готова к Трансформации?) 🤍\n\n"
-    "Нажми кнопку «Показать номер», чтобы стать участницей Трансформации «Верни себе себя»."
-)
-
 PHONE_KB = {
     "keyboard": [[{"text": "Показать номер", "request_contact": True}]],
     "resize_keyboard": True,
@@ -38,29 +42,22 @@ PHONE_KB = {
 
 REMOVE_KB = {"remove_keyboard": True}
 
-AFTER_PHONE = (
-    "Я Тебя поздравляю и очень за Тебя рад 🤍\n\n"
-    "Каждый день Ты будешь получать:\n\n"
-    "   1. Аудио — пошаговый материал\n\n"
-    "   2. Ментальную тренировку\n\n"
-    "   3. Духовную практику\n\n"
-    "   4. Задание для применения в Своей жизни\n\n"
-    "После выполнения Ты делишься своими результатами, инсайтами и вопросами в комментариях к посту.\n\n"
-    "Разборы результатов участниц, ответы на вопросы, важные инсайты и направление твоего развития.\n\n"
-    "Так Ты проходишь Трансформацию через практику, обратную связь и ежедневную работу над собой.\n\n"
-    "🌱 Формат: Если Ты - Девушка - Экстраверт, которая заряжается не только от развития внутри себя, но и от взаимодействия с людьми, обсуждения мыслей, инсайтов и обмена энергией.\n\n"
-    "🤍 Эта Трансформация Для Тебя 🤍"
-)
-
 _chat_locks: dict[int, asyncio.Lock] = defaultdict(asyncio.Lock)
 _action_locks: dict[tuple[int, str], asyncio.Lock] = defaultdict(asyncio.Lock)
 _last_text: dict[int, tuple[str, float]] = {}
-_ENV_CHANNEL_RE = re.compile(r"(?m)^TELEGRAM_CHANNEL_ID=.*$")
+_ENV_CHANNEL_RE = {
+    BOT_LIFE: re.compile(r"(?m)^TELEGRAM_CHANNEL_ID=.*$"),
+    BOT_ENGLISH: re.compile(r"(?m)^ENGLISH_TELEGRAM_CHANNEL_ID=.*$"),
+}
+_ENV_CHANNEL_KEY = {
+    BOT_LIFE: "TELEGRAM_CHANNEL_ID",
+    BOT_ENGLISH: "ENGLISH_TELEGRAM_CHANNEL_ID",
+}
 _DEDUP_SEC = 45.0
 
 
-def _invite_kb(url: str) -> dict:
-    return {"inline_keyboard": [[{"text": "Открыть портал", "url": url}]]}
+def _invite_kb(url: str, button: str = "Открыть портал") -> dict:
+    return {"inline_keyboard": [[{"text": button or "Открыть портал", "url": url}]]}
 
 
 def _pay_url_kb(url: str, title: str = "Оплатить") -> dict:
@@ -78,24 +75,33 @@ def _normalize_phone(raw: str | None) -> str | None:
     return digits
 
 
-def _remember_channel_id(settings: Settings, chat_id: int | str) -> None:
+def _remember_channel_id(settings: Settings, bot: BotSpec, chat_id: int | str) -> None:
     cid = str(chat_id).strip()
-    if not cid or settings.telegram_channel_id == cid:
+    if not cid:
         return
-    settings.telegram_channel_id = cid
+    if bot.key == BOT_ENGLISH:
+        if settings.english_telegram_channel_id == cid:
+            return
+        settings.english_telegram_channel_id = cid
+    else:
+        if settings.telegram_channel_id == cid:
+            return
+        settings.telegram_channel_id = cid
     get_settings.cache_clear()
     env_path = ROOT_DIR / ".env"
+    env_key = _ENV_CHANNEL_KEY.get(bot.key, "TELEGRAM_CHANNEL_ID")
+    env_re = _ENV_CHANNEL_RE.get(bot.key, _ENV_CHANNEL_RE[BOT_LIFE])
     try:
         text = env_path.read_text(encoding="utf-8") if env_path.exists() else ""
-        line = f"TELEGRAM_CHANNEL_ID={cid}"
-        if _ENV_CHANNEL_RE.search(text):
-            text = _ENV_CHANNEL_RE.sub(line, text)
+        line = f"{env_key}={cid}"
+        if env_re.search(text):
+            text = env_re.sub(line, text)
         else:
             text = text.rstrip() + ("\n" if text and not text.endswith("\n") else "") + line + "\n"
         env_path.write_text(text, encoding="utf-8")
-        logger.info("TELEGRAM_CHANNEL_ID сохранён: %s", cid)
+        logger.info("%s сохранён: %s", env_key, cid)
     except Exception:
-        logger.exception("Не удалось записать TELEGRAM_CHANNEL_ID в .env")
+        logger.exception("Не удалось записать %s в .env", env_key)
 
 
 def _extract_channel_id(update: dict[str, Any]) -> int | None:
@@ -108,7 +114,6 @@ def _extract_channel_id(update: dict[str, Any]) -> int | None:
     fwd = message.get("forward_from_chat") or {}
     if fwd.get("type") == "channel" and fwd.get("id") is not None:
         return int(fwd["id"])
-    # Telegram Bot API 7+: forward_origin
     origin = message.get("forward_origin") or {}
     if origin.get("type") == "channel":
         chat = origin.get("chat") or {}
@@ -120,17 +125,22 @@ def _extract_channel_id(update: dict[str, Any]) -> int | None:
     return None
 
 
-async def handle_bot_update(settings: Settings, update: dict[str, Any]) -> None:
+async def handle_bot_update(
+    settings: Settings,
+    update: dict[str, Any],
+    *,
+    bot: BotSpec | None = None,
+) -> None:
+    bot = bot or settings.bot(BOT_LIFE)
     channel_id = _extract_channel_id(update)
     if channel_id is not None:
-        _remember_channel_id(settings, channel_id)
-        # Если это только событие канала — дальше нечего отвечать пользователю
+        _remember_channel_id(settings, bot, channel_id)
         if update.get("my_chat_member") or update.get("channel_post") or update.get("edited_channel_post"):
             return
 
     callback = update.get("callback_query")
     if callback:
-        await _handle_callback(settings, callback)
+        await _handle_callback(settings, bot, callback)
         return
 
     message = update.get("message") or {}
@@ -143,10 +153,10 @@ async def handle_bot_update(settings: Settings, update: dict[str, Any]) -> None:
     if not chat_id:
         return
 
-    # Пересланный пост канала — сохранили id выше; подтвердим
     if channel_id is not None and (message.get("forward_from_chat") or message.get("forward_origin")):
         await _bot_message(
             settings,
+            bot,
             chat_id,
             from_user.get("id"),
             f"Канал привязан: <code>{channel_id}</code>\nТеперь после оплаты будет реальная пригласительная.",
@@ -155,21 +165,21 @@ async def handle_bot_update(settings: Settings, update: dict[str, Any]) -> None:
 
     contact = message.get("contact")
     if contact:
-        await _handle_contact(settings, from_user, chat_id, contact)
+        await _handle_contact(settings, bot, from_user, chat_id, contact)
         return
 
     text = (message.get("text") or "").strip()
     if text.startswith("/start"):
         parts = text.split(maxsplit=1)
         payload = parts[1].strip() if len(parts) > 1 else ""
-        await _handle_start(settings, from_user, chat_id, payload)
+        await _handle_start(settings, bot, from_user, chat_id, payload)
         return
 
-    # Любой другой текст — не дублируем welcome, просто мягко напоминаем про номер
     if not text:
         return
     await _bot_message(
         settings,
+        bot,
         chat_id,
         from_user.get("id"),
         "Чтобы зарегистрироваться — нажми «Показать номер».",
@@ -179,6 +189,7 @@ async def handle_bot_update(settings: Settings, update: dict[str, Any]) -> None:
 
 async def _handle_start(
     settings: Settings,
+    bot: BotSpec,
     from_user: dict,
     chat_id: int,
     payload: str,
@@ -189,22 +200,26 @@ async def _handle_start(
     lang = from_user.get("language_code")
     premium = bool(from_user.get("is_premium"))
 
-    # paid_* больше не используем как deep-link; если вдруг пришло — тихо sync, без ответа
     if payload.startswith("paid_") and tg_id:
         asyncio.create_task(_sync_open_bg(settings), name=f"sync-paid-{tg_id}")
         return
 
     async with SessionLocal() as session:
+        copy = await get_bot_copy(session, bot.key)
         if tg_id:
-            paid = await latest_succeeded_for_telegram(session, tg_id)
+            paid = await latest_succeeded_for_telegram(session, tg_id, product_code=bot.product_code)
             if paid and paid.invites:
-                dates = await get_cohort_settings(session, settings)
+                dates_display = None
+                if bot.product_code == PRODUCT_PROGRAM:
+                    dates = await get_cohort_settings(session, settings)
+                    dates_display = dates.transformation_start_display
                 await _bot_message(
                     settings,
+                    bot,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Трансформация начинается {dates.transformation_start_display}.",
-                    _invite_kb(paid.invites[0].invite_url),
+                    format_already_access(copy.already_access, date=dates_display),
+                    _invite_kb(paid.invites[0].invite_url, copy.invite_button),
                 )
                 return
 
@@ -242,6 +257,8 @@ async def _handle_start(
             cid = metrika_cid_for(client.metrika_client_id, tg_id)
             visit = {
                 "funnel": "bot_started",
+                "bot_key": bot.key,
+                "product_code": bot.product_code,
                 "telegram": {
                     "lang": lang or "",
                     "premium": "1" if premium else "0",
@@ -255,13 +272,16 @@ async def _handle_start(
                     visit["utm"] = json.loads(client.utm_json)
                 except Exception:
                     pass
-            if cid:
+            # Метрика — только life (счётчик рекламы трансформации).
+            if cid and bot.key == BOT_LIFE:
                 asyncio.create_task(
                     _track_start(settings, cid, visit, client.landing_url),
                     name=f"metrika-start-{tg_id}",
                 )
+        else:
+            await session.commit()
 
-    await _bot_message(settings, chat_id, tg_id, WELCOME, PHONE_KB)
+    await _bot_message(settings, bot, chat_id, tg_id, copy.welcome, PHONE_KB)
 
 
 async def _track_start(settings: Settings, cid: str, visit: dict, referrer: str | None) -> None:
@@ -281,6 +301,7 @@ async def _track_start(settings: Settings, cid: str, visit: dict, referrer: str 
 
 async def _handle_contact(
     settings: Settings,
+    bot: BotSpec,
     from_user: dict,
     chat_id: int,
     contact: dict,
@@ -292,6 +313,7 @@ async def _handle_contact(
     if contact.get("user_id") and int(contact["user_id"]) != int(tg_id):
         await _bot_message(
             settings,
+            bot,
             chat_id,
             tg_id,
             "Нужен именно твой номер. Нажми «Показать номер».",
@@ -303,6 +325,7 @@ async def _handle_contact(
     if not phone:
         await _bot_message(
             settings,
+            bot,
             chat_id,
             tg_id,
             "Не удалось прочитать номер. Нажми «Показать номер» ещё раз.",
@@ -315,17 +338,22 @@ async def _handle_contact(
     lang = from_user.get("language_code")
     premium = bool(from_user.get("is_premium"))
 
-    async with _action_locks[(tg_id, "pay")]:
+    async with _action_locks[(tg_id, f"pay:{bot.key}")]:
         async with SessionLocal() as session:
-            paid = await latest_succeeded_for_telegram(session, tg_id)
+            copy = await get_bot_copy(session, bot.key)
+            paid = await latest_succeeded_for_telegram(session, tg_id, product_code=bot.product_code)
             if paid and paid.invites:
-                dates = await get_cohort_settings(session, settings)
+                dates_display = None
+                if bot.product_code == PRODUCT_PROGRAM:
+                    dates = await get_cohort_settings(session, settings)
+                    dates_display = dates.transformation_start_display
                 await _bot_message(
                     settings,
+                    bot,
                     chat_id,
                     tg_id,
-                    f"Тебе уже открыт доступ. Трансформация начинается {dates.transformation_start_display}.",
-                    _invite_kb(paid.invites[0].invite_url),
+                    format_already_access(copy.already_access, date=dates_display),
+                    _invite_kb(paid.invites[0].invite_url, copy.invite_button),
                     remove_keyboard=True,
                 )
                 return
@@ -346,15 +374,16 @@ async def _handle_contact(
 
         result = await _checkout_url(
             settings,
+            bot,
             from_user,
             chat_id,
             phone=phone,
-            product_code="program",
+            product_code=bot.product_code,
         )
         if not result:
             return
         pay_url, order_id, cid, pay_label = result
-        if cid:
+        if cid and bot.key == BOT_LIFE:
             asyncio.create_task(_track_phone(settings, cid, order_id))
         log_show_phone(telegram_user_id=tg_id, order_id=order_id)
         async with SessionLocal() as session:
@@ -364,27 +393,28 @@ async def _handle_contact(
                 telegram_user_id=tg_id,
                 metrika_client_id=cid,
             )
+            copy = await get_bot_copy(session, bot.key)
 
         await _bot_message(
             settings,
+            bot,
             chat_id,
             tg_id,
-            AFTER_PHONE,
+            copy.after_phone,
             _pay_url_kb(pay_url, pay_label),
             remove_keyboard=True,
         )
 
 
-async def _handle_callback(settings: Settings, callback: dict[str, Any]) -> None:
+async def _handle_callback(settings: Settings, bot: BotSpec, callback: dict[str, Any]) -> None:
     from_user = callback.get("from") or {}
     message = callback.get("message") or {}
     chat_id = (message.get("chat") or {}).get("id")
     cb_id = callback.get("id")
 
-    # Сразу гасим «часики» на кнопке — не ждём оплату
     async def _ack() -> None:
         try:
-            tg = await shared_tg(settings)
+            tg = await shared_tg(settings, bot)
             await tg.answer_callback(cb_id)
         except Exception:
             logger.exception("answerCallbackQuery")
@@ -397,6 +427,7 @@ async def _handle_callback(settings: Settings, callback: dict[str, Any]) -> None
 
 async def _checkout_url(
     settings: Settings,
+    bot: BotSpec,
     from_user: dict,
     chat_id: int,
     *,
@@ -413,6 +444,7 @@ async def _checkout_url(
         if notify:
             await _bot_message(
                 settings,
+                bot,
                 chat_id,
                 tg_id,
                 "Сейчас оплата временно недоступна. Напиши нам чуть позже.",
@@ -431,24 +463,31 @@ async def _checkout_url(
                 source="telegram",
                 product_code=product_code,
             )
-            offer = await get_cohort_settings(session, settings)
+            if product_code == PRODUCT_PROGRAM:
+                offer = await get_cohort_settings(session, settings)
+                pay_label = offer.pay_button_label
+            else:
+                product = settings.product(product_code)
+                from app.services.dates import format_price_ru
+
+                pay_label = f"Оплатить {format_price_ru(int(product['rubles']))}"
             cid = metrika_cid_for(
                 payment.client.metrika_client_id if payment.client else None,
                 tg_id,
             )
             pay_url = pay_url_for(settings, payment)
             order_id = payment.order_id
-            pay_label = offer.pay_button_label
     except ValueError as exc:
         logger.info("checkout отказ (%s): %s", product_code, exc)
         if notify:
-            await _bot_message(settings, chat_id, tg_id, str(exc))
+            await _bot_message(settings, bot, chat_id, tg_id, str(exc))
         return None
     except Exception:
         logger.exception("checkout из бота (%s)", product_code)
         if notify:
             await _bot_message(
                 settings,
+                bot,
                 chat_id,
                 tg_id,
                 "Не удалось создать оплату. Нажми «Показать номер» ещё раз.",
@@ -460,6 +499,7 @@ async def _checkout_url(
         if notify:
             await _bot_message(
                 settings,
+                bot,
                 chat_id,
                 tg_id,
                 "Не удалось создать оплату. Нажми «Показать номер» ещё раз.",
@@ -484,6 +524,7 @@ async def _track_phone(settings: Settings, cid: str, order_id: str) -> None:
 
 async def _bot_message(
     settings: Settings,
+    bot: BotSpec,
     chat_id: int,
     tg_id: int | None,
     text: str,
@@ -494,7 +535,6 @@ async def _bot_message(
     key = int(chat_id)
     now = time.monotonic()
     prev = _last_text.get(key)
-    # Антидубль: одинаковый текст подряд в один чат не шлём
     if prev and prev[0] == text and (now - prev[1]) < _DEDUP_SEC:
         logger.info("Пропуск дубля в chat %s", chat_id)
         return
@@ -504,7 +544,7 @@ async def _bot_message(
         prev = _last_text.get(key)
         if prev and prev[0] == text and (now - prev[1]) < _DEDUP_SEC:
             return
-        tg = await shared_tg(settings)
+        tg = await shared_tg(settings, bot)
         if remove_keyboard and markup is not None:
             dummy = await tg.send_message(chat_id, "\u2060", reply_markup=REMOVE_KB)
             await tg.send_message(chat_id, text, reply_markup=markup)
@@ -530,30 +570,35 @@ async def _sync_open_bg(settings: Settings) -> None:
 class PollingRunner:
     def __init__(self, settings: Settings | None = None):
         self.settings = settings or get_settings()
-        self._task: asyncio.Task | None = None
+        self._tasks: list[asyncio.Task] = []
         self._sync_task: asyncio.Task | None = None
         self._stopped = asyncio.Event()
 
     async def start(self) -> None:
-        if self._task and not self._task.done():
+        if self._tasks and any(not t.done() for t in self._tasks):
             return
         self._stopped.clear()
-        self._task = asyncio.create_task(self._loop(), name="telegram-polling")
+        self._tasks = []
+        for bot in self.settings.configured_bots():
+            self._tasks.append(
+                asyncio.create_task(self._loop(bot), name=f"telegram-polling-{bot.key}")
+            )
         self._sync_task = asyncio.create_task(self._sync_loop(), name="yookassa-sync")
 
     async def stop(self) -> None:
         self._stopped.set()
-        for task in (self._task, self._sync_task):
+        for task in [*self._tasks, self._sync_task]:
             if task:
                 task.cancel()
                 try:
                     await task
                 except asyncio.CancelledError:
                     pass
+        self._tasks = []
+        self._sync_task = None
         await close_shared_tg()
 
     async def _sync_loop(self) -> None:
-        """Без webhook: каждые 4с проверяем открытые платежи и шлём invite один раз."""
         while not self._stopped.is_set():
             try:
                 await _sync_open_bg(self.settings)
@@ -564,37 +609,36 @@ class PollingRunner:
             except asyncio.TimeoutError:
                 pass
 
-    async def _loop(self) -> None:
-        if not self.settings.telegram_bot_token:
-            logger.warning("Polling не запущен: нет TELEGRAM_BOT_TOKEN")
+    async def _loop(self, bot: BotSpec) -> None:
+        if not bot.has_token:
+            logger.warning("Polling (%s) не запущен: нет токена", bot.key)
             return
         offset: int | None = None
-        logger.info("Telegram polling запущен")
-        tg = await shared_tg(self.settings)
+        logger.info("Telegram polling запущен (%s)", bot.key)
+        tg = await shared_tg(self.settings, bot)
         try:
             await tg.delete_webhook()
         except Exception:
-            logger.exception("deleteWebhook не удался")
+            logger.exception("deleteWebhook не удался (%s)", bot.key)
         while not self._stopped.is_set():
             try:
                 updates = await tg.get_updates(offset=offset, timeout=20)
                 tasks = []
                 for upd in updates:
                     offset = upd["update_id"] + 1
-                    tasks.append(asyncio.create_task(self._safe_handle(upd)))
+                    tasks.append(asyncio.create_task(self._safe_handle(bot, upd)))
                 if tasks:
                     await asyncio.gather(*tasks)
             except asyncio.CancelledError:
                 raise
             except Exception:
-                logger.exception("Ошибка polling, повтор через 1с")
+                logger.exception("Ошибка polling (%s), повтор через 1с", bot.key)
                 await asyncio.sleep(1)
-        logger.info("Telegram polling остановлен")
+        logger.info("Telegram polling остановлен (%s)", bot.key)
 
-    async def _safe_handle(self, upd: dict[str, Any]) -> None:
+    async def _safe_handle(self, bot: BotSpec, upd: dict[str, Any]) -> None:
         try:
-            # свежие settings — если канал только что сохранили
             settings = get_settings()
-            await handle_bot_update(settings, upd)
+            await handle_bot_update(settings, upd, bot=settings.bot(bot.key))
         except Exception:
-            logger.exception("Ошибка обработки update %s", upd.get("update_id"))
+            logger.exception("Ошибка обработки update %s (%s)", upd.get("update_id"), bot.key)

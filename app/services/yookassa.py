@@ -61,13 +61,15 @@ class YooKassaClient:
             "metadata": metadata,
         }
         if self.settings.yookassa_vat_code is not None and (customer_email or customer_phone):
+            receipt_title = (self.settings.yookassa_receipt_description or description)[:128]
             item: dict[str, Any] = {
-                "description": description[:128],
+                "description": receipt_title,
                 "quantity": "1.00",
                 "amount": {"value": amount_value, "currency": "RUB"},
                 "vat_code": self.settings.yookassa_vat_code,
                 "payment_mode": "full_payment",
-                "payment_subject": "service",
+                # intellectual_activity → тег 1212 = 9 (предоставление РИД)
+                "payment_subject": self.settings.yookassa_payment_subject or "intellectual_activity",
             }
             customer: dict[str, str] = {}
             if customer_email:

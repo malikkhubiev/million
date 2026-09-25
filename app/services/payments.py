@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from app.config import Settings
+from app.config import PRODUCT_ENGLISH, PRODUCT_PROGRAM, Settings
 from app.models import Client, InviteLink, Payment, WebhookEvent
 from app.services.dates import consume_seat, get_cohort_settings
 from app.services.metrika import metrika_cid_for, track_goal, track_purchase
@@ -29,6 +29,7 @@ def payment_row(payment: Payment) -> dict:
     return {
         "id": payment.id,
         "order_id": payment.order_id,
+        "product_code": payment.product_code,
         "telegram_user_id": client.telegram_user_id if client else None,
         "telegram_username": client.telegram_username if client else None,
         "amount": payment.amount_value,
@@ -44,8 +45,8 @@ def payment_row(payment: Payment) -> dict:
     }
 
 
-def new_order_id() -> str:
-    return "VS-" + uuid.uuid4().hex[:10].upper()
+def new_order_id(prefix: str = "VS") -> str:
+    return f"{prefix}-" + uuid.uuid4().hex[:10].upper()
 
 
 def pay_url_for(settings: Settings, payment: Payment) -> str | None:
@@ -119,12 +120,18 @@ async def create_checkout(
     source: str = "telegram",
     product_code: str = "program",
 ) -> Payment:
-    offer = await get_cohort_settings(session, settings)
-    if offer.seats_left <= 0:
-        raise ValueError("Мест больше нет — набор закрыт")
-
+    product_code = (product_code or PRODUCT_PROGRAM).strip().lower()
     product = settings.product(product_code)
-    amount_value = offer.price_amount_value
+    bot = settings.bot_for_product(product_code)
+
+    if product_code == PRODUCT_PROGRAM:
+        offer = await get_cohort_settings(session, settings)
+        if offer.seats_left <= 0:
+            raise ValueError("Мест больше нет — набор закрыт")
+        amount_value = offer.price_amount_value
+    else:
+        amount_value = str(product["amount_value"])
+
     client = await get_or_create_client(
         session,
         name=name,
@@ -148,8 +155,9 @@ async def create_checkout(
     if existing and existing.confirmation_url:
         return existing
 
-    order_id = new_order_id()
+    order_id = new_order_id(bot.order_prefix)
     idempotence_key = str(uuid.uuid4())
+    # В ЮKassa description — для кабинета; в чеке 54-ФЗ — receipt description (лицензия).
     description = f"{product['title']} · {order_id}"
     payment = Payment(
         client_id=client.id,
@@ -165,13 +173,13 @@ async def create_checkout(
     session.add(payment)
     await session.flush()
 
-    # Без ?start= — просто возвращаемся в чат с ботом; доставка после succeeded.
-    return_url = settings.bot_link
+    return_url = bot.bot_link or settings.bot_link
     metadata = {
         "order_id": order_id,
         "client_id": str(client.id),
         "source": source,
         "product_code": product_code,
+        "bot_key": bot.key,
     }
     if telegram_user_id:
         metadata["telegram_user_id"] = str(telegram_user_id)
@@ -260,13 +268,14 @@ async def mark_webhook_seen(
 
 
 async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Payment) -> InviteLink | None:
-    code = payment.product_code or "program"
-    if code != "program":
-        logger.warning("Пропуск неосновного продукта %s (%s)", code, payment.order_id)
+    code = (payment.product_code or PRODUCT_PROGRAM).strip().lower()
+    if code not in {PRODUCT_PROGRAM, PRODUCT_ENGLISH}:
+        logger.warning("Пропуск неизвестного продукта %s (%s)", code, payment.order_id)
         payment.fulfilled_at = payment.fulfilled_at or datetime.now(timezone.utc)
         await session.commit()
         return None
 
+    bot = settings.bot_for_product(code)
     result = await session.execute(
         select(InviteLink).where(InviteLink.payment_id == payment.id).order_by(InviteLink.id.desc())
     )
@@ -277,13 +286,17 @@ async def fulfill_payment(session: AsyncSession, settings: Settings, payment: Pa
         await deliver_invite(session, settings, payment, existing)
         return existing
 
-    if not settings.is_telegram_configured:
-        logger.warning("Telegram не настроен — invite не создан для %s", payment.order_id)
+    if not bot.is_configured:
+        logger.warning(
+            "Telegram (%s) не настроен — invite не создан для %s",
+            bot.key,
+            payment.order_id,
+        )
         return None
 
     from app.services.telegram import shared_tg
 
-    tg = await shared_tg(settings)
+    tg = await shared_tg(settings, bot)
     try:
         link_data = await tg.create_invite_link(
             name=payment.order_id[:32],
@@ -374,15 +387,16 @@ async def deliver_invite(
     if not client or not client.telegram_user_id:
         logger.info("Нет telegram_user_id для автодоставки %s", payment.order_id)
         return
-    text = (
-        "👏 Сомнения позади и ты знаешь чего хочешь!\n\n"
-        f'<a href="{invite.invite_url}">Дверь открыта, проходи)</a>\n\n'
-        "Приглашение эксклюзивное, будь аккуратна 🙏"
-    )
+    code = (payment.product_code or PRODUCT_PROGRAM).strip().lower()
+    bot = settings.bot_for_product(code)
+    from app.services.bot_copy import format_invite_message, get_bot_copy
+
+    copy = await get_bot_copy(session, bot.key)
+    text = format_invite_message(copy, invite.invite_url)
     try:
         from app.services.telegram import shared_tg
 
-        tg = await shared_tg(settings)
+        tg = await shared_tg(settings, bot)
         await tg.send_message(client.telegram_user_id, text)
         payment.invite_sent_at = datetime.now(timezone.utc)
         await session.commit()
@@ -436,7 +450,7 @@ async def apply_yookassa_payment_object(
 
     if status == "succeeded":
         payment.paid_at = payment.paid_at or datetime.now(timezone.utc)
-        if not already_succeeded:
+        if not already_succeeded and (payment.product_code or PRODUCT_PROGRAM) == PRODUCT_PROGRAM:
             await consume_seat(session)
         await session.commit()
         await fulfill_payment(session, settings, payment)

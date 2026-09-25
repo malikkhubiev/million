@@ -18,6 +18,7 @@ from app.db import SessionLocal, get_session, init_db
 from app.logging_utils import install_secret_redaction
 from app.services.behavior import behavior_report, export_txt, upsert_behavior
 from app.services.bot import PollingRunner, handle_bot_update
+from app.services.bot_copy import get_all_bot_copy, set_bot_copy
 from app.services.dates import get_cohort_settings, set_cohort_settings
 from app.services.metrika import metrika_cid_for, track_add_to_cart, track_goal
 from app.services.payments import (
@@ -81,17 +82,19 @@ async def lifespan(app: FastAPI):
             settings.telegram_mode,
             mode,
         )
-    if mode == "polling" and settings.telegram_bot_token:
+    bots = settings.configured_bots()
+    if mode == "polling" and bots:
         await polling_runner.start()
-    elif mode == "webhook" and settings.telegram_bot_token:
-        async with TelegramClient(settings) as tg:
-            url = f"{settings.app_base_url.rstrip('/')}{settings.telegram_webhook_path}"
-            try:
-                await tg.delete_webhook()
-                await tg.set_webhook(url, settings.telegram_webhook_secret)
-                logger.info("Telegram webhook: %s", url)
-            except Exception:
-                logger.exception("Не удалось установить Telegram webhook")
+    elif mode == "webhook":
+        for bot in bots:
+            async with TelegramClient(settings, bot=bot) as tg:
+                url = f"{settings.app_base_url.rstrip('/')}{bot.webhook_path}"
+                try:
+                    await tg.delete_webhook()
+                    await tg.set_webhook(url, bot.webhook_secret)
+                    logger.info("Telegram webhook (%s): %s", bot.key, url)
+                except Exception:
+                    logger.exception("Не удалось установить Telegram webhook (%s)", bot.key)
     yield
     await polling_runner.stop()
 
@@ -109,15 +112,27 @@ app.add_middleware(
 
 @app.get("/api/health")
 async def health(settings: Settings = Depends(get_settings)):
+    life = settings.bot("life")
+    english = settings.bot("english")
     return {
         "ok": True,
         "env": settings.app_env,
         "yookassa": settings.is_yookassa_configured,
         "telegram": settings.is_telegram_configured,
+        "telegram_english": settings.is_english_telegram_configured,
         "telegram_mode": settings.effective_telegram_mode,
         "telegram_mode_env": settings.telegram_mode,
         "metrika": settings.is_metrika_configured,
         "bot": settings.bot_link,
+        "bot_english": settings.english_bot_link,
+        "bots": {
+            "life": {"configured": life.is_configured, "username": life.username},
+            "english": {"configured": english.is_configured, "username": english.username},
+        },
+        "receipt": {
+            "description": settings.yookassa_receipt_description,
+            "payment_subject": settings.yookassa_payment_subject,
+        },
     }
 
 
@@ -134,6 +149,16 @@ class CohortDatesIn(BaseModel):
     transformation_start: str
     price_rubles: int | str
     seats_left: int | str
+
+
+class BotTextsIn(BaseModel):
+    welcome: str
+    after_phone: str
+    already_access: str
+    invite_before: str
+    invite_link_text: str
+    invite_after: str
+    invite_button: str = "Открыть портал"
 
 
 class IntentIn(BaseModel):
@@ -413,6 +438,46 @@ async def dates_admin_page():
     return FileResponse(path)
 
 
+@app.get("/admin/texts")
+async def texts_admin_page():
+    path = Path(__file__).resolve().parent.parent / "static" / "texts.html"
+    if not path.exists():
+        raise HTTPException(404, "texts.html not found")
+    return FileResponse(path)
+
+
+@app.get("/api/bot-texts")
+async def bot_texts_list(session: AsyncSession = Depends(get_session)):
+    data = await get_all_bot_copy(session)
+    return {"ok": True, **data}
+
+
+@app.put("/api/bot-texts/{bot_key}")
+async def bot_texts_update(
+    bot_key: str,
+    body: BotTextsIn,
+    session: AsyncSession = Depends(get_session),
+):
+    key = (bot_key or "").strip().lower()
+    if key not in {"life", "english"}:
+        raise HTTPException(404, "Бот: life или english")
+    try:
+        copy = await set_bot_copy(
+            session,
+            key,
+            welcome=body.welcome,
+            after_phone=body.after_phone,
+            already_access=body.already_access,
+            invite_before=body.invite_before,
+            invite_link_text=body.invite_link_text,
+            invite_after=body.invite_after,
+            invite_button=body.invite_button,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return {"ok": True, "bot": copy.as_dict()}
+
+
 @app.get("/api/dates")
 async def public_dates(session: AsyncSession = Depends(get_session)):
     """Публичные настройки набора: даты, цена, места."""
@@ -650,10 +715,26 @@ async def telegram_webhook(
     x_telegram_bot_api_secret_token: str | None = Header(default=None),
     settings: Settings = Depends(get_settings),
 ):
-    if settings.telegram_webhook_secret and x_telegram_bot_api_secret_token != settings.telegram_webhook_secret:
+    bot = settings.bot("life")
+    if bot.webhook_secret and x_telegram_bot_api_secret_token != bot.webhook_secret:
         raise HTTPException(403, "Bad secret")
     update = await request.json()
-    background.add_task(handle_bot_update, settings, update)
+    background.add_task(handle_bot_update, settings, update, bot=bot)
+    return {"ok": True}
+
+
+@app.post(_settings.english_telegram_webhook_path)
+async def telegram_english_webhook(
+    request: Request,
+    background: BackgroundTasks,
+    x_telegram_bot_api_secret_token: str | None = Header(default=None),
+    settings: Settings = Depends(get_settings),
+):
+    bot = settings.bot("english")
+    if bot.webhook_secret and x_telegram_bot_api_secret_token != bot.webhook_secret:
+        raise HTTPException(403, "Bad secret")
+    update = await request.json()
+    background.add_task(handle_bot_update, settings, update, bot=bot)
     return {"ok": True}
 
 
@@ -672,6 +753,8 @@ async def home_page():
 
 @app.get("/api")
 async def api_index(settings: Settings = Depends(get_settings)):
+    life = settings.bot("life")
+    english = settings.bot("english")
     return {
         "ok": True,
         "app": settings.app_name,
@@ -679,11 +762,21 @@ async def api_index(settings: Settings = Depends(get_settings)):
         "dashboard": "/admin/behavior",
         "payments": "/admin/payments",
         "dates": "/admin/dates",
+        "texts": "/admin/texts",
         "clients": "/admin/payments",
         "health": "/api/health",
         "public_dates": "/api/dates",
+        "bot_texts": "/api/bot-texts",
         "site": settings.site_link,
+        "bots": {
+            "life": life.bot_link,
+            "english": english.bot_link,
+        },
         "yookassa_webhook": f"{settings.app_base_url.rstrip('/')}{settings.yookassa_webhook_path}",
+        "telegram_webhooks": {
+            "life": f"{settings.app_base_url.rstrip('/')}{life.webhook_path}",
+            "english": f"{settings.app_base_url.rstrip('/')}{english.webhook_path}",
+        },
     }
 
 

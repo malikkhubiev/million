@@ -68,7 +68,65 @@ async def test_create_checkout_calls_yookassa(session, settings):
     inst.create_payment.assert_awaited_once()
     call_kw = inst.create_payment.await_args.kwargs
     assert call_kw["metadata"]["telegram_user_id"] == "1001"
+    assert call_kw["metadata"]["product_code"] == "program"
     assert call_kw["customer_phone"] == "+79001234567"
+
+
+@pytest.mark.asyncio
+async def test_create_checkout_english_product(session, settings, monkeypatch):
+    monkeypatch.setattr(settings, "english_product_price_kopecks", 1_500_000)
+    monkeypatch.setattr(settings, "yookassa_vat_code", 1)
+    monkeypatch.setattr(settings, "yookassa_receipt_description", "Лицензия на цифровые материалы")
+    monkeypatch.setattr(settings, "yookassa_payment_subject", "intellectual_activity")
+
+    captured: dict = {}
+
+    async def _create_payment(**kwargs):
+        captured.update(kwargs)
+        return {
+            "id": "yk-en-1",
+            "status": "pending",
+            "confirmation": {"confirmation_url": "https://yookassa.ru/checkout/en"},
+        }
+
+    with patch("app.services.payments.YooKassaClient") as YK:
+        inst = YK.return_value
+        inst.__aenter__ = AsyncMock(return_value=inst)
+        inst.__aexit__ = AsyncMock(return_value=None)
+        inst.create_payment = AsyncMock(side_effect=_create_payment)
+
+        payment = await create_checkout(
+            session,
+            settings,
+            name="English",
+            telegram_user_id=2002,
+            phone="+79007654321",
+            product_code="english",
+        )
+
+    assert payment.order_id.startswith("EN-")
+    assert payment.product_code == "english"
+    assert payment.amount_value == "15000.00"
+    assert captured["metadata"]["product_code"] == "english"
+    assert captured["metadata"]["bot_key"] == "english"
+
+    # Чек собирается внутри YooKassaClient — проверим напрямую
+    from app.services.yookassa import YooKassaClient
+
+    with patch.object(YooKassaClient, "_request", new_callable=AsyncMock) as req:
+        req.return_value = {"id": "x", "status": "pending", "confirmation": {}}
+        async with YooKassaClient(settings) as yk:
+            await yk.create_payment(
+                amount_value="15000.00",
+                description="Курс · EN-1",
+                return_url="https://t.me/bot",
+                metadata={"order_id": "EN-1"},
+                customer_phone="79001234567",
+            )
+        body = req.await_args.kwargs["json"]
+        assert body["receipt"]["items"][0]["description"] == "Лицензия на цифровые материалы"
+        assert body["receipt"]["items"][0]["payment_subject"] == "intellectual_activity"
+
 
 
 @pytest.mark.asyncio

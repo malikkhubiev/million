@@ -42,6 +42,7 @@ async def db_engine(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
 
     from app import db as db_mod
     from app.models import Base
+    from app.services.bot_copy import ensure_bot_copy_defaults
     from app.services.dates import ensure_defaults
 
     engine = create_async_engine(url, echo=False)
@@ -58,6 +59,7 @@ async def db_engine(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     settings = get_settings()
     async with SessionLocal() as session:
         await ensure_defaults(session, settings)
+        await ensure_bot_copy_defaults(session)
 
     yield engine, SessionLocal, settings
 

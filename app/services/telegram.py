@@ -5,11 +5,11 @@ from typing import Any
 
 import httpx
 
-from app.config import Settings
+from app.config import BotSpec, Settings
 
 TELEGRAM_API = "https://api.telegram.org"
 
-_shared: "TelegramClient | None" = None
+_shared: dict[str, "TelegramClient"] = {}
 
 
 class TelegramError(RuntimeError):
@@ -19,8 +19,19 @@ class TelegramError(RuntimeError):
 
 
 class TelegramClient:
-    def __init__(self, settings: Settings, client: httpx.AsyncClient | None = None):
+    def __init__(
+        self,
+        settings: Settings,
+        *,
+        bot: BotSpec | None = None,
+        token: str | None = None,
+        channel_id: str | None = None,
+        client: httpx.AsyncClient | None = None,
+    ):
         self.settings = settings
+        self.bot = bot or settings.bot("life")
+        self._token = (token if token is not None else self.bot.token) or ""
+        self._channel_id = (channel_id if channel_id is not None else self.bot.channel_id) or ""
         self._client = client
         self._owns_client = client is None
 
@@ -44,11 +55,11 @@ class TelegramClient:
         return self._client
 
     def _url(self, method: str) -> str:
-        return f"{TELEGRAM_API}/bot{self.settings.telegram_bot_token}/{method}"
+        return f"{TELEGRAM_API}/bot{self._token}/{method}"
 
     async def call(self, method: str, **payload: Any) -> dict[str, Any]:
-        if not self.settings.telegram_bot_token:
-            raise TelegramError("TELEGRAM_BOT_TOKEN не задан")
+        if not self._token:
+            raise TelegramError("Telegram bot token не задан")
         response = await self.client.post(self._url(method), json=payload)
         data = response.json()
         if not data.get("ok"):
@@ -67,11 +78,13 @@ class TelegramClient:
         name: str | None = None,
         member_limit: int | None = None,
         expire_days: int | None = None,
+        channel_id: str | None = None,
     ) -> dict[str, Any]:
-        if not self.settings.telegram_channel_id:
-            raise TelegramError("TELEGRAM_CHANNEL_ID не задан")
+        chat_id = channel_id or self._channel_id
+        if not chat_id:
+            raise TelegramError("channel_id не задан")
 
-        body: dict[str, Any] = {"chat_id": self.settings.telegram_channel_id}
+        body: dict[str, Any] = {"chat_id": chat_id}
         if name:
             body["name"] = name[:32]
         limit = member_limit if member_limit is not None else self.settings.telegram_invite_member_limit
@@ -171,19 +184,30 @@ class TelegramClient:
         return data["result"]
 
 
-async def shared_tg(settings: Settings) -> TelegramClient:
-    """Один keep-alive HTTP-клиент на процесс — без TLS handshake на каждое сообщение."""
-    global _shared
-    if _shared is None or _shared._client is None:
-        _shared = TelegramClient(settings)
-        await _shared.__aenter__()
-    else:
-        _shared.settings = settings
-    return _shared
+async def shared_tg(settings: Settings, bot: BotSpec | None = None) -> TelegramClient:
+    """Keep-alive HTTP-клиент на каждый бот (life / english)."""
+    spec = bot or settings.bot("life")
+    key = spec.key
+    existing = _shared.get(key)
+    if existing is None or existing._client is None:
+        client = TelegramClient(settings, bot=spec)
+        await client.__aenter__()
+        _shared[key] = client
+        return client
+    existing.settings = settings
+    existing.bot = spec
+    existing._token = spec.token
+    existing._channel_id = spec.channel_id
+    return existing
 
 
-async def close_shared_tg() -> None:
+async def close_shared_tg(bot_key: str | None = None) -> None:
     global _shared
-    if _shared is not None:
-        await _shared.__aexit__(None, None, None)
-        _shared = None
+    if bot_key:
+        client = _shared.pop(bot_key, None)
+        if client is not None:
+            await client.__aexit__(None, None, None)
+        return
+    for key in list(_shared.keys()):
+        client = _shared.pop(key)
+        await client.__aexit__(None, None, None)

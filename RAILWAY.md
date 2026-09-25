@@ -32,22 +32,30 @@ railway domain
 
 ## 3. Переменные окружения
 
-Скопируй из `railway.env.example` в **Variables**. Минимум:
+Бери ключи из локального `.env` и проставь в Railway **Variables**. Минимум:
 
 | Ключ | Значение |
 | --- | --- |
 | `APP_BASE_URL` | `https://твой-домен.up.railway.app` |
 | `APP_ENV` | `production` |
 | `TELEGRAM_MODE` | `webhook` |
-| `TELEGRAM_BOT_TOKEN` | токен бота |
-| `TELEGRAM_CHANNEL_ID` | id канала |
+| `TELEGRAM_BOT_TOKEN` | токен бота трансформации |
+| `TELEGRAM_CHANNEL_ID` | id канала трансформации |
 | `TELEGRAM_WEBHOOK_SECRET` | случайная строка |
+| `ENGLISH_TELEGRAM_BOT_TOKEN` | токен бота английского (опционально) |
+| `ENGLISH_TELEGRAM_CHANNEL_ID` | id канала английского |
+| `ENGLISH_TELEGRAM_WEBHOOK_SECRET` | случайная строка |
 | `YOOKASSA_SHOP_ID` / `YOOKASSA_SECRET_KEY` | ключи ЮKassa |
+| `YOOKASSA_RECEIPT_DESCRIPTION` | `Лицензия на цифровые материалы` |
+| `YOOKASSA_PAYMENT_SUBJECT` | `intellectual_activity` (РИД, тег 1212=9) |
 | `METRIKA_MP_TOKEN` | токен Measurement Protocol |
 | `SECRET_KEY` | случайная строка |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./data/app.db` |
 
-После первого деплоя webhook Telegram выставится сам (если `TELEGRAM_MODE=webhook` и верный `APP_BASE_URL`).
+После первого деплоя webhook Telegram выставится сам для каждого бота с токеном
+(`/api/telegram/webhook` и `/api/telegram/english/webhook`).
+
+Один сервис Railway = оба бота + одна ЮKassa (расходы пополам).
 
 ## 4. Webhook ЮKassa
 

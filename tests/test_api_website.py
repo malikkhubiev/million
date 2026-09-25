@@ -26,7 +26,39 @@ async def test_api_index(client):
     data = r.json()
     assert data["ok"] is True
     assert data["public_dates"] == "/api/dates"
+    assert data["bot_texts"] == "/api/bot-texts"
     assert "/api/yookassa/webhook" in data["yookassa_webhook"]
+
+
+@pytest.mark.asyncio
+async def test_bot_texts_get_and_put(client):
+    r = await client.get("/api/bot-texts")
+    assert r.status_code == 200
+    data = r.json()
+    assert data["ok"] is True
+    assert "Трансформации" in data["life"]["welcome"]
+    assert "Показать номер" in data["english"]["welcome"]
+
+    r2 = await client.put(
+        "/api/bot-texts/english",
+        json={
+            "welcome": "EN welcome test",
+            "after_phone": "EN after",
+            "already_access": "EN already",
+            "invite_before": "EN before",
+            "invite_link_text": "EN link",
+            "invite_after": "EN after invite",
+            "invite_button": "Open",
+        },
+    )
+    assert r2.status_code == 200
+    body = r2.json()
+    assert body["bot"]["welcome"] == "EN welcome test"
+
+    r3 = await client.get("/api/bot-texts")
+    assert r3.json()["english"]["welcome"] == "EN welcome test"
+    # life не трогали
+    assert "Трансформации" in r3.json()["life"]["welcome"]
 
 
 @pytest.mark.asyncio

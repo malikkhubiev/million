@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Тексты ботов</title>
+<style>
+:root{
+  --bg:#f3efe8;--ink:#1a1714;--muted:#6e675e;--line:rgba(26,23,20,.12);
+  --card:#fffcf7;--good:#2a6b45;--bad:#8a3a2a;--accent:#1f4d6e;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:
+  radial-gradient(900px 400px at 10% -10%,rgba(31,77,110,.08),transparent),
+  radial-gradient(700px 360px at 100% 0%,rgba(42,107,69,.07),transparent),
+  var(--bg);color:var(--ink);padding:20px 14px 72px}
+h1{font-size:clamp(26px,4vw,38px);font-weight:650;letter-spacing:-.02em;margin-bottom:4px}
+.lead{color:var(--muted);margin-bottom:18px;max-width:720px;line-height:1.45;font-size:14px}
+.admin-nav{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:12px}
+.admin-nav a{
+  font:inherit;padding:7px 12px;border:1px solid var(--line);border-radius:8px;
+  text-decoration:none;color:var(--muted);background:var(--card);font-size:13px;
+}
+.admin-nav a:hover{color:var(--ink);border-color:rgba(26,23,20,.25)}
+.admin-nav a.active{background:#1a1714;color:#f7f1e8;border-color:#1a1714}
+.tabs{display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap}
+.tabs button{
+  font:inherit;padding:8px 14px;border:1px solid var(--line);border-radius:8px;
+  background:var(--card);color:var(--muted);cursor:pointer;font-size:13px;
+}
+.tabs button.active{background:#1a1714;color:#f7f1e8;border-color:#1a1714}
+.panel{
+  max-width:720px;background:var(--card);border:1px solid var(--line);
+  border-radius:12px;padding:20px 18px 18px;
+}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.field textarea,.field input{
+  font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:8px;
+  background:#fff;font-size:15px;line-height:1.45;resize:vertical;min-height:72px;
+}
+.field input{min-height:0}
+.hint{font-size:12px;color:var(--muted);line-height:1.4}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+button.primary{font:inherit;padding:9px 14px;border:1px solid #1a1714;background:#1a1714;color:#f7f1e8;cursor:pointer;border-radius:8px;font-size:13px}
+button.secondary{font:inherit;padding:9px 14px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;border-radius:8px;font-size:13px}
+.err{color:var(--bad);margin:12px 0 0;font-size:13px}
+.ok{color:var(--good);margin:12px 0 0;font-size:13px}
+</style>
+</head>
+<body>
+<nav class="admin-nav" aria-label="Разделы">
+  <a href="/">Меню</a>
+  <a href="/admin/behavior">Дашборд</a>
+  <a href="/admin/payments">Клиенты</a>
+  <a href="/admin/dates">Набор</a>
+  <a class="active" href="/admin/texts">Тексты ботов</a>
+</nav>
+
+<h1>Тексты ботов</h1>
+<p class="lead">Одинаковая механика у обоих: welcome → номер → after phone → оплата → invite. Правь тексты здесь — пишется в БД, без .env.</p>
+
+<div class="tabs" role="tablist">
+  <button type="button" class="active" data-bot="life" id="tabLife">Трансформация</button>
+  <button type="button" data-bot="english" id="tabEnglish">Английский</button>
+</div>
+
+<div class="panel">
+  <form id="form">
+    <div class="field">
+      <label for="welcome">Welcome (/start)</label>
+      <textarea id="welcome" name="welcome" rows="5" required></textarea>
+    </div>
+    <div class="field">
+      <label for="after_phone">После номера (перед оплатой)</label>
+      <textarea id="after_phone" name="after_phone" rows="8" required></textarea>
+    </div>
+    <div class="field">
+      <label for="already_access">Уже оплатил</label>
+      <textarea id="already_access" name="already_access" rows="2" required></textarea>
+      <span class="hint" id="alreadyHint">Для трансформации можно писать <code>{date}</code> — подставится дата старта.</span>
+    </div>
+    <div class="field">
+      <label for="invite_before">Invite — текст до ссылки</label>
+      <textarea id="invite_before" name="invite_before" rows="2" required></textarea>
+    </div>
+    <div class="field">
+      <label for="invite_link_text">Invite — текст ссылки</label>
+      <input id="invite_link_text" name="invite_link_text" type="text" required>
+    </div>
+    <div class="field">
+      <label for="invite_after">Invite — текст после ссылки</label>
+      <textarea id="invite_after" name="invite_after" rows="2" required></textarea>
+    </div>
+    <div class="field">
+      <label for="invite_button">Кнопка invite</label>
+      <input id="invite_button" name="invite_button" type="text" required>
+      <span class="hint">По умолчанию «Открыть портал».</span>
+    </div>
+    <div class="actions">
+      <button type="submit" class="primary">Сохранить</button>
+      <button type="button" class="secondary" id="btnReload">Отменить</button>
+    </div>
+    <div class="err" id="err" hidden></div>
+    <div class="ok" id="msg" hidden></div>
+  </form>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const err = $("err");
+const msg = $("msg");
+let currentBot = "life";
+let cache = { life: null, english: null };
+
+function showErr(t) { err.hidden = !t; err.textContent = t || ""; }
+function showMsg(t) { msg.hidden = !t; msg.textContent = t || ""; }
+
+function fill(data) {
+  $("welcome").value = data.welcome || "";
+  $("after_phone").value = data.after_phone || "";
+  $("already_access").value = data.already_access || "";
+  $("invite_before").value = data.invite_before || "";
+  $("invite_link_text").value = data.invite_link_text || "";
+  $("invite_after").value = data.invite_after || "";
+  $("invite_button").value = data.invite_button || "Открыть портал";
+  $("alreadyHint").hidden = currentBot !== "life";
+}
+
+function setTab(bot) {
+  currentBot = bot;
+  document.querySelectorAll(".tabs button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.bot === bot);
+  });
+  if (cache[bot]) fill(cache[bot]);
+}
+
+async function load() {
+  showErr("");
+  const r = await fetch("/api/bot-texts");
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  const data = await r.json();
+  cache.life = data.life;
+  cache.english = data.english;
+  fill(cache[currentBot]);
+}
+
+$("tabLife").onclick = () => setTab("life");
+$("tabEnglish").onclick = () => setTab("english");
+$("btnReload").onclick = () => { showMsg(""); showErr(""); load().catch((e) => showErr(String(e))); };
+
+$("form").onsubmit = async (e) => {
+  e.preventDefault();
+  showErr("");
+  showMsg("");
+  const body = {
+    welcome: $("welcome").value,
+    after_phone: $("after_phone").value,
+    already_access: $("already_access").value,
+    invite_before: $("invite_before").value,
+    invite_link_text: $("invite_link_text").value,
+    invite_after: $("invite_after").value,
+    invite_button: $("invite_button").value,
+  };
+  try {
+    const r = await fetch("/api/bot-texts/" + currentBot, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(data.detail || ("HTTP " + r.status));
+    cache[currentBot] = data.bot || body;
+    fill(cache[currentBot]);
+    showMsg("Сохранено в БД");
+  } catch (ex) {
+    showErr(String(ex.message || ex));
+  }
+};
+
+load().catch((e) => showErr(String(e)));
+</script>
+</body>
+</html>

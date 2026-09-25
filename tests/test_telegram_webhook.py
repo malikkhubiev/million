@@ -28,3 +28,18 @@ async def test_telegram_webhook_ok(client):
     assert r.status_code == 200
     assert r.json()["ok"] is True
     handler.assert_called()
+
+
+@pytest.mark.asyncio
+async def test_telegram_english_webhook_ok(client):
+    with patch("app.main.handle_bot_update", new_callable=AsyncMock) as handler:
+        r = await client.post(
+            "/api/telegram/english/webhook",
+            json={"update_id": 3, "message": {"text": "/start"}},
+            headers={"X-Telegram-Bot-Api-Secret-Token": "change-me-english"},
+        )
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    handler.assert_called()
+    kwargs = handler.await_args.kwargs
+    assert kwargs["bot"].key == "english"

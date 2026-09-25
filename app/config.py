@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
@@ -6,6 +9,39 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 REPO_ROOT = ROOT_DIR.parent
+
+# Ключи ботов в одном деплое (один FastAPI, два токена Telegram).
+BOT_LIFE = "life"
+BOT_ENGLISH = "english"
+
+PRODUCT_PROGRAM = "program"
+PRODUCT_ENGLISH = "english"
+
+
+@dataclass(frozen=True)
+class BotSpec:
+    """Один Telegram-бот + канал выдачи + продукт."""
+
+    key: str
+    product_code: str
+    token: str
+    username: str
+    channel_id: str
+    webhook_path: str
+    webhook_secret: str
+    order_prefix: str
+
+    @property
+    def is_configured(self) -> bool:
+        return bool(self.token and self.channel_id)
+
+    @property
+    def has_token(self) -> bool:
+        return bool(self.token)
+
+    @property
+    def bot_link(self) -> str:
+        return f"https://t.me/{self.username}" if self.username else ""
 
 
 class Settings(BaseSettings):
@@ -24,6 +60,10 @@ class Settings(BaseSettings):
     product_price_kopecks: int = 6_500_000
     product_title: str = "Групповая Трансформация · 14 дней"
 
+    # Второй продукт (английский) — цена из env; места/даты набора только у program.
+    english_product_price_kopecks: int = 1_500_000
+    english_product_title: str = "Курс английского · цифровые материалы"
+
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"
 
     yookassa_shop_id: str = ""
@@ -32,6 +72,9 @@ class Settings(BaseSettings):
     yookassa_vat_code: int | None = None
     yookassa_tax_system_code: int | None = None
     yookassa_webhook_path: str = "/api/yookassa/webhook"
+    # Чек 54-ФЗ: наименование (тег 1030) и payment_subject → признак 1212=9 (РИД).
+    yookassa_receipt_description: str = "Лицензия на цифровые материалы"
+    yookassa_payment_subject: str = "intellectual_activity"
 
     @field_validator("yookassa_vat_code", "yookassa_tax_system_code", mode="before")
     @classmethod
@@ -40,6 +83,7 @@ class Settings(BaseSettings):
             return None
         return v
 
+    # Бот «Верни себе себя» (психология / трансформация)
     telegram_bot_token: str = ""
     telegram_bot_username: str = "teacher_life_bot"
     telegram_channel_id: str = ""
@@ -49,6 +93,14 @@ class Settings(BaseSettings):
     telegram_mode: str = "polling"
     telegram_webhook_secret: str = "change-me"
     telegram_webhook_path: str = "/api/telegram/webhook"
+
+    # Бот английского (подруга) — тот же деплой, другой токен/канал/webhook.
+    # Тексты обоих ботов — в БД /admin/texts (не в env).
+    english_telegram_bot_token: str = ""
+    english_telegram_bot_username: str = "english_course_bot"
+    english_telegram_channel_id: str = ""
+    english_telegram_webhook_secret: str = "change-me-english"
+    english_telegram_webhook_path: str = "/api/telegram/english/webhook"
 
     site_dir: str = ""
     site_url: str = "https://life-energy-phi.vercel.app"
@@ -83,15 +135,59 @@ class Settings(BaseSettings):
     def price_value(self) -> str:
         return f"{self.price_rubles:.2f}"
 
+    def bot(self, key: str) -> BotSpec:
+        key = (key or BOT_LIFE).strip().lower()
+        if key == BOT_ENGLISH:
+            return BotSpec(
+                key=BOT_ENGLISH,
+                product_code=PRODUCT_ENGLISH,
+                token=self.english_telegram_bot_token,
+                username=self.english_telegram_bot_username,
+                channel_id=self.english_telegram_channel_id,
+                webhook_path=self.english_telegram_webhook_path,
+                webhook_secret=self.english_telegram_webhook_secret,
+                order_prefix="EN",
+            )
+        if key in (BOT_LIFE, "program", "vs"):
+            return BotSpec(
+                key=BOT_LIFE,
+                product_code=PRODUCT_PROGRAM,
+                token=self.telegram_bot_token,
+                username=self.telegram_bot_username,
+                channel_id=self.telegram_channel_id,
+                webhook_path=self.telegram_webhook_path,
+                webhook_secret=self.telegram_webhook_secret,
+                order_prefix="VS",
+            )
+        raise ValueError(f"Неизвестный бот: {key}")
+
+    def bot_for_product(self, product_code: str | None) -> BotSpec:
+        code = (product_code or PRODUCT_PROGRAM).strip().lower()
+        if code == PRODUCT_ENGLISH:
+            return self.bot(BOT_ENGLISH)
+        return self.bot(BOT_LIFE)
+
+    def configured_bots(self) -> list[BotSpec]:
+        return [b for b in (self.bot(BOT_LIFE), self.bot(BOT_ENGLISH)) if b.has_token]
+
     def product(self, code: str = "program") -> dict[str, str | int]:
-        if code != "program":
+        code = (code or PRODUCT_PROGRAM).strip().lower()
+        if code == PRODUCT_ENGLISH:
+            item: dict[str, str | int] = {
+                "code": PRODUCT_ENGLISH,
+                "id": "en-course",
+                "title": self.english_product_title,
+                "kopecks": self.english_product_price_kopecks,
+            }
+        elif code == PRODUCT_PROGRAM:
+            item = {
+                "code": PRODUCT_PROGRAM,
+                "id": "vs-program",
+                "title": self.product_title,
+                "kopecks": self.product_price_kopecks,
+            }
+        else:
             raise ValueError(f"Неизвестный продукт: {code}")
-        item: dict[str, str | int] = {
-            "code": "program",
-            "id": "vs-program",
-            "title": self.product_title,
-            "kopecks": self.product_price_kopecks,
-        }
         kopecks = int(item["kopecks"])
         item["rubles"] = kopecks / 100
         item["amount_value"] = f"{kopecks / 100:.2f}"
@@ -118,7 +214,11 @@ class Settings(BaseSettings):
 
     @property
     def is_telegram_configured(self) -> bool:
-        return bool(self.telegram_bot_token and self.telegram_channel_id)
+        return self.bot(BOT_LIFE).is_configured
+
+    @property
+    def is_english_telegram_configured(self) -> bool:
+        return self.bot(BOT_ENGLISH).is_configured
 
     @property
     def return_url(self) -> str:
@@ -126,7 +226,11 @@ class Settings(BaseSettings):
 
     @property
     def bot_link(self) -> str:
-        return f"https://t.me/{self.telegram_bot_username}"
+        return self.bot(BOT_LIFE).bot_link
+
+    @property
+    def english_bot_link(self) -> str:
+        return self.bot(BOT_ENGLISH).bot_link
 
     @property
     def site_link(self) -> str:

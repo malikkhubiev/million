@@ -4,8 +4,6 @@ __pycache__
 *.pyc
 .git
 .env
-railway.env
-render.env
 data/*.db
 data/*.db-*
 *.log

@@ -1,21 +1,26 @@
-# Бот «Верни себе себя»
+# Бот «Верни себе себя» (+ бот английского)
 
-FastAPI, ЮKassa, Telegram-бот, БД. Сайт — отдельно: [life_energy](https://github.com/malikkhubiev/life_energy).
+Один FastAPI на Railway, два Telegram-бота, одна ЮKassa. Сайт — отдельно: [life_energy](https://github.com/malikkhubiev/life_energy).
 
-Клиент на сайте нажимает одну кнопку → Telegram (`?start=site`). Бот просит номер телефона, создаёт оплату в ЮKassa (65 000 ₽) и после `payment.succeeded` сам присылает пригласительную в закрытый канал.
+- **life** — трансформация «Верни себе себя» (`TELEGRAM_*`)
+- **english** — курс английского (`ENGLISH_TELEGRAM_*`), сайт не обязателен: продукт объясняется в боте
 
-Для отладки оплат используйте тестовый магазин ЮKassa (`test_…` ключ).
+В чеке 54-ФЗ для обоих: наименование «Лицензия на цифровые материалы», `payment_subject=intellectual_activity` (РИД).
+
+Клиент в боте нажимает «Показать номер» → оплата ЮKassa → после `payment.succeeded` invite в канал этого бота.
 
 ```bash
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
-copy .env.example .env
+# заполни .env (единственный файл секретов)
 uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Локально: `TELEGRAM_MODE=polling`.  
+Локально: `TELEGRAM_MODE=polling` (оба бота с токеном крутятся вместе).  
 Прод: `TELEGRAM_MODE=webhook`.
+
+Дефолтные тексты ботов: `texts.py` (`LIFE`, `ENGLISH`, `DEFAULTS`) → сид в БД → правка в `/admin/texts`.
 
 Узнать id канала: `python -m app.scripts.discover_channel`  
 Проверить invite: `python -m app.scripts.test_invite`
@@ -33,7 +38,7 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 - Webhook ЮKassa: `https://….up.railway.app/api/yookassa/webhook`
 - После деплоя обнови `LIFE_API` на лендинге (Vercel)
 
-Шаблон переменных: `railway.env.example`.
+Секреты и токены — только в `.env` локально / Variables на Railway (отдельных `*.env.example` нет).
 
 ## Render (устарело)
 
