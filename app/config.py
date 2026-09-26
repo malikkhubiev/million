@@ -62,7 +62,7 @@ class Settings(BaseSettings):
 
     # Второй продукт (английский) — цена из env; места/даты набора только у program.
     english_product_price_kopecks: int = 1_500_000
-    english_product_title: str = "Курс английского · цифровые материалы"
+    english_product_title: str = "Лицензия на цифровые обучающие материалы"
 
     database_url: str = f"sqlite+aiosqlite:///{(ROOT_DIR / 'data' / 'app.db').as_posix()}"
 
